@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { io } from 'socket.io-client';
 import './App.css';
 
-const socket = io('http://localhost:4000');
+const socket = io('https://mafia-game-ttb9.onrender.com');
 
 const EMOJIS = ['🐱','🐶','🦊','🐻','🐼','🐨','🦁','🐯','🐸','🐙','🦄','🐺','🎭','👻','🧛','🕵️','🤠','🥷'];
 const COLORS = ['#e74c3c','#3498db','#2ecc71','#f39c12','#9b59b6','#1abc9c','#e67e22','#e91e63','#00bcd4','#8bc34a'];
