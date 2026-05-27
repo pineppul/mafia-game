@@ -1,0 +1,7 @@
+(1번째 터미널에)
+cd server
+node index.js
+
+(2번째 터미널에)
+cd client
+npm start
