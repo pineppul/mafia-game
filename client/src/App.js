@@ -42,7 +42,7 @@ const bg2 = 'linear-gradient(135deg, #0c0c1d 0%, #1a1a3e 50%, #0c0c1d 100%)';
 
 function Page({ children, light = true, center = true }) {
   return (
-    <div style={{ minHeight: '100vh', minHeight: '-webkit-fill-available', background: light ? bg1 : bg2, fontFamily: "'Segoe UI',sans-serif", color: light ? '#333' : '#fff', display: 'flex', flexDirection: 'column', alignItems: center ? 'center' : 'stretch', justifyContent: center ? 'center' : 'flex-start', padding: '20px 0' }}>
+    <div style={{ minHeight: '100vh', background: light ? bg1 : bg2, fontFamily: "'Segoe UI',sans-serif", color: light ? '#333' : '#fff', display: 'flex', flexDirection: 'column', alignItems: center ? 'center' : 'stretch', justifyContent: center ? 'center' : 'flex-start', padding: '20px 0' }}>
       <div style={{ maxWidth: 460, width: '100%', padding: '0 20px' }}>{children}</div>
     </div>
   );
