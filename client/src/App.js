@@ -48,8 +48,8 @@ function Page({ children, light = true, center = true }) {
   );
 }
 
-function Card({ children, style }) {
-  return <div style={{ background: 'rgba(255,255,255,0.95)', borderRadius: 20, padding: 24, marginBottom: 14, boxShadow: '0 8px 32px rgba(0,0,0,0.12)', ...style }}>{children}</div>;
+function Card({ children, style, onClick }) {
+  return <div onClick={onClick} style={{ background: 'rgba(255,255,255,0.95)', borderRadius: 20, padding: 24, marginBottom: 14, boxShadow: '0 8px 32px rgba(0,0,0,0.12)', ...style }}>{children}</div>;
 }
 
 function DCard({ children, style }) {
