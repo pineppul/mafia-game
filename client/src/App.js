@@ -436,7 +436,11 @@ function App() {
             <span>☀️{rSet.dayTime}초</span><span>🗳️{rSet.voteTime}초</span><span>🌙{rSet.nightTime}초</span>
           </DCard>}
           {err && <DCard style={{ background: 'rgba(231,76,60,0.1)', color: '#e74c3c', textAlign: 'center', fontWeight: 600 }}>{err}</DCard>}
-          <Header dark>참가자 ({players.length}/{rSet?.maxPlayers || 10})</Header>
+          <Header dark>참가자 ({players.length}/{rSet?.maxPlayers || 10})</Header>{isHost && !rSet?.started && (
+            <div style={{ display: 'flex', gap: 8, marginBottom: 12 }}>
+              <Btn bg="linear-gradient(135deg,#9b59b6,#8e44ad)" shadow="rgba(155,89,182,0.3)" onClick={() => socket.emit('addBot', { roomCode: code })} style={{ flex: 1 }}>🤖 봇 추가</Btn>
+            </div>
+          )}
           <p style={{ fontSize: 11, color: '#444', marginBottom: 8 }}>💡 우클릭 → 정보/추방</p>
           {players.map((p, i) => (
             <DCard key={p.id} style={{ display: 'flex', alignItems: 'center', gap: 12, cursor: 'context-menu' }} onContextMenu={e => ctxMenu(e, p)}>
@@ -446,7 +450,8 @@ function App() {
                 {p.id === socket.id && <span style={{ color: '#555', fontSize: 11, marginLeft: 6 }}>(나)</span>}
                 {i === 0 && <span style={{ color: '#f39c12', fontSize: 11, marginLeft: 6 }}>👑</span>}
               </div>
-              {!p.uid && <span style={{ fontSize: 11, color: '#f39c12', background: 'rgba(243,156,18,0.1)', padding: '2px 8px', borderRadius: 6 }}>게스트</span>}
+              {p.isBot && <span style={{ fontSize: 11, color: '#9b59b6', background: 'rgba(155,89,182,0.1)', padding: '2px 8px', borderRadius: 6 }}>🤖 봇</span>}
+              {!p.uid && !p.isBot && <span style={{ fontSize: 11, color: '#f39c12', background: 'rgba(243,156,18,0.1)', padding: '2px 8px', borderRadius: 6 }}>게스트</span>}
             </DCard>
           ))}
           {isHost ? <Btn bg="linear-gradient(135deg,#e74c3c,#c0392b)" shadow="rgba(231,76,60,0.3)" onClick={startGame} style={{ marginTop: 12 }}>🎮 게임 시작 (최소 5명)</Btn>
