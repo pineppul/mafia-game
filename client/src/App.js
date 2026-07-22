@@ -239,7 +239,7 @@ function App() {
     return () => { ['profileData','roomUpdate','gameState','timerUpdate','voteUpdate','phaseChange','policeResult','chatMessage','gameOver','rankingsList','playerInfo','kicked','quickMatchFound','quickMatchStatus','error'].forEach(e => socket.off(e)); };
   }, [mute]);
 
-  const login = async () => { try { await signInWithPopup(auth, gProvider); } catch (e) { setErr('로그인 실패'); } };
+  const login = async () => { try { await signInWithPopup(auth, gProvider); } catch (e) { setErr('로그인 실패: ' + e.message); } };
   const logout = async () => { await signOut(auth); setScreen('main'); };
   const saveProf = () => { if (!nick.trim()) { setErr('닉네임 입력!'); return; } socket.emit('saveProfile', { uid: user.uid, nickname: nick, emoji, color }); setScreen('main'); setErr(''); };
   const createRoom = () => { if (!nick || !code) { setErr('닉네임과 방 코드 입력!'); return; } setErr(''); socket.emit('createRoom', { roomCode: code, nickname: nick, emoji, color, uid: user?.uid, settings: sets }); };
