@@ -436,7 +436,7 @@ function App() {
             <span>☀️{rSet.dayTime}초</span><span>🗳️{rSet.voteTime}초</span><span>🌙{rSet.nightTime}초</span>
           </DCard>}
           {err && <DCard style={{ background: 'rgba(231,76,60,0.1)', color: '#e74c3c', textAlign: 'center', fontWeight: 600 }}>{err}</DCard>}
-          <Header dark>참가자 ({players.length}/{rSet?.maxPlayers || 10})</Header>{isHost && !rSet?.started && (
+          <Header dark>참가자 ({players.length}/{rSet?.maxPlayers || 10})</Header>{isHost && (
             <div style={{ display: 'flex', gap: 8, marginBottom: 12 }}>
               <Btn bg="linear-gradient(135deg,#9b59b6,#8e44ad)" shadow="rgba(155,89,182,0.3)" onClick={() => socket.emit('addBot', { roomCode: code })} style={{ flex: 1 }}>🤖 봇 추가</Btn>
             </div>
