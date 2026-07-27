@@ -20,6 +20,22 @@ const socket = io('https://mafia-game-ttb9.onrender.com');
 const EMOJIS = ['🐱','🐶','🦊','🐻','🐼','🐨','🦁','🐯','🐸','🐙','🦄','🐺','🎭','👻','🧛','🕵️','🤠','🥷','🐧','🦋','🐳','🎃','🤖','👾'];
 const COLORS = ['#e74c3c','#3498db','#2ecc71','#f39c12','#9b59b6','#1abc9c','#e67e22','#e91e63','#00bcd4','#8bc34a','#ff6b6b','#ffd93d'];
 const RC = { '마피아': '#e74c3c', '경찰': '#3498db', '의사': '#2ecc71', '시민': '#95a5a6' };
+const SKINS = [
+  { id: 'common_1', name: '기본 링', rarity: 'common', border: '#ccc', glow: 'none' },
+  { id: 'common_2', name: '실버 링', rarity: 'common', border: '#b0b0b0', glow: 'none' },
+  { id: 'common_3', name: '브론즈 링', rarity: 'common', border: '#cd7f32', glow: 'none' },
+  { id: 'uncommon_1', name: '에메랄드 링', rarity: 'uncommon', border: '#2ecc71', glow: '0 0 8px #2ecc71' },
+  { id: 'uncommon_2', name: '민트 링', rarity: 'uncommon', border: '#1abc9c', glow: '0 0 8px #1abc9c' },
+  { id: 'rare_1', name: '사파이어 링', rarity: 'rare', border: '#3498db', glow: '0 0 12px #3498db' },
+  { id: 'rare_2', name: '아이스 링', rarity: 'rare', border: '#00d4ff', glow: '0 0 12px #00d4ff' },
+  { id: 'epic_1', name: '아메시스트 링', rarity: 'epic', border: '#9b59b6', glow: '0 0 18px #9b59b6, 0 0 30px #9b59b6' },
+  { id: 'epic_2', name: '네온 링', rarity: 'epic', border: '#e91e63', glow: '0 0 18px #e91e63, 0 0 30px #e91e63' },
+  { id: 'legendary_1', name: '드래곤 골드', rarity: 'legendary', border: '#ffd700', glow: '0 0 25px #ffd700, 0 0 50px #ffd700, 0 0 70px #ff9500' },
+  { id: 'legendary_2', name: '레인보우 오라', rarity: 'legendary', border: 'linear-gradient(45deg,#ff0000,#ff9900,#33cc33,#3399ff,#9933ff)', glow: '0 0 25px #fff, 0 0 50px #ff00ff' }
+];
+const RARITY_COLOR = { common: '#aaa', uncommon: '#2ecc71', rare: '#3498db', epic: '#9b59b6', legendary: '#ffd700' };
+const RARITY_LABEL = { common: 'COMMON', uncommon: 'UNCOMMON', rare: 'RARE', epic: 'EPIC', legendary: 'LEGENDARY' };
+function getSkin(id) { return SKINS.find(s => s.id === id); }
 const RE = { '마피아': '🔪', '경찰': '🔍', '의사': '💊', '시민': '👤' };
 
 /* ── 효과음 ── */
@@ -64,8 +80,18 @@ function BtnSm({ children, bg, onClick }) {
   return <button onClick={onClick} style={{ padding: '8px 16px', border: 'none', borderRadius: 10, fontSize: 13, fontWeight: 700, color: '#fff', cursor: 'pointer', background: bg }}>{children}</button>;
 }
 
-function Avatar({ emoji, color, size = 48 }) {
-  return <div style={{ width: size, height: size, borderRadius: '50%', background: color || '#667eea', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: size * 0.5, border: '3px solid rgba(255,255,255,0.4)', flexShrink: 0 }}>{emoji || '🎭'}</div>;
+function Avatar({ emoji, color, size = 48, skinId }) {
+  const skin = skinId ? getSkin(skinId) : null;
+  const borderStyle = skin ? (skin.border.includes('gradient') ? skin.border : skin.border) : 'rgba(255,255,255,0.4)';
+  const isGradient = skin && skin.border.includes('gradient');
+  return (
+    <div style={{ position: 'relative', width: size, height: size, flexShrink: 0 }}>
+      {isGradient && <div style={{ position: 'absolute', inset: -3, borderRadius: '50%', background: skin.border, boxShadow: skin.glow !== 'none' ? skin.glow : 'none' }} />}
+      <div style={{ position: 'absolute', inset: isGradient ? 3 : 0, width: isGradient ? size - 6 : size, height: isGradient ? size - 6 : size, borderRadius: '50%', background: color || '#667eea', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: size * 0.5, border: isGradient ? 'none' : `3px solid ${borderStyle}`, boxShadow: !isGradient && skin && skin.glow !== 'none' ? skin.glow : 'none' }}>
+        {emoji || '🎭'}
+      </div>
+    </div>
+  );
 }
 
 function Label({ children }) {
