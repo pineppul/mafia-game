@@ -233,6 +233,7 @@ function App() {
     socket.on('rankingsList', l => setLRanks(l));
     socket.on('playerInfo', i => setPInfo(i));
     socket.on('kicked', () => { setErr('추방되었습니다'); setScreen('main'); });
+    socket.on('roomClosed', d => { setErr(d.message); setScreen('main'); });
     socket.on('quickMatchFound', d => { setCode(d.roomCode); setQStat(null); });
     socket.on('quickMatchStatus', s => { setQStat(s); if (s.status === 'waiting') setScreen('quickWait'); });
     socket.on('error', m => setErr(m));

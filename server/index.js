@@ -526,16 +526,32 @@ io.on('connection', (socket) => {
   socket.on('disconnect', () => {
     const qi = quickQueue.findIndex(p => p.id === socket.id);
     if (qi !== -1) quickQueue.splice(qi, 1);
+
     for (const rc in rooms) {
       if (!rooms[rc]) continue;
       const r = rooms[rc];
       const wasHost = r.host === socket.id;
+      const wasPlayer = r.players.find(p => p.id === socket.id);
+      if (!wasPlayer) continue;
+
+      // 방장이 나가면 방 전체 삭제
+      if (wasHost) {
+        if (r.timer) clearInterval(r.timer);
+        if (r.botChatTimer) clearInterval(r.botChatTimer);
+        io.to(rc).emit('roomClosed', { message: '방장이 나가서 방이 닫혔습니다.' });
+        delete rooms[rc];
+        continue;
+      }
+
       r.players = r.players.filter(p => p.id !== socket.id);
-      if (r.players.length === 0) { if (r.timer) clearInterval(r.timer); if (r.botChatTimer) clearInterval(r.botChatTimer); delete rooms[rc]; continue; }
-      if (wasHost) { const newHost = r.players.find(p => !p.isBot); if (newHost) { r.host = newHost.id; io.to(rc).emit('chatMessage', { nickname: '시스템', type: 'system', emoji: '👑', message: `${newHost.nickname} 새 방장!` }); } }
+      if (r.players.length === 0) {
+        if (r.timer) clearInterval(r.timer);
+        if (r.botChatTimer) clearInterval(r.botChatTimer);
+        delete rooms[rc];
+        continue;
+      }
       io.to(rc).emit('roomUpdate', r);
     }
   });
-});
 
 server.listen(4000, () => console.log('서버 실행 중: http://localhost:4000'));
