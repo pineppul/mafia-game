@@ -237,6 +237,49 @@ async function getCoins(uid) {
   catch (e) { return 0; }
 }
 async function saveCoins(uid, amount) {
+  // 스킨 목록
+const SKINS = [
+  { id: 'common_1', name: '기본 링', rarity: 'common', border: '#ccc', glow: 'none' },
+  { id: 'common_2', name: '실버 링', rarity: 'common', border: '#b0b0b0', glow: 'none' },
+  { id: 'common_3', name: '브론즈 링', rarity: 'common', border: '#cd7f32', glow: 'none' },
+  { id: 'uncommon_1', name: '에메랄드 링', rarity: 'uncommon', border: '#2ecc71', glow: '0 0 8px #2ecc71' },
+  { id: 'uncommon_2', name: '민트 링', rarity: 'uncommon', border: '#1abc9c', glow: '0 0 8px #1abc9c' },
+  { id: 'rare_1', name: '사파이어 링', rarity: 'rare', border: '#3498db', glow: '0 0 12px #3498db' },
+  { id: 'rare_2', name: '아이스 링', rarity: 'rare', border: '#00d4ff', glow: '0 0 12px #00d4ff' },
+  { id: 'epic_1', name: '아메시스트 링', rarity: 'epic', border: '#9b59b6', glow: '0 0 18px #9b59b6, 0 0 30px #9b59b6' },
+  { id: 'epic_2', name: '네온 링', rarity: 'epic', border: '#e91e63', glow: '0 0 18px #e91e63, 0 0 30px #e91e63' },
+  { id: 'legendary_1', name: '드래곤 골드', rarity: 'legendary', border: '#ffd700', glow: '0 0 25px #ffd700, 0 0 50px #ffd700, 0 0 70px #ff9500' },
+  { id: 'legendary_2', name: '레인보우 오라', rarity: 'legendary', border: 'linear-gradient(45deg,#ff0000,#ff9900,#33cc33,#3399ff,#9933ff)', glow: '0 0 25px #fff, 0 0 50px #ff00ff' }
+];
+
+const RARITY_WEIGHTS = { common: 60, uncommon: 25, rare: 10, epic: 4, legendary: 1 };
+
+function rollSkin() {
+  const rand = Math.random() * 100;
+  let cumulative = 0;
+  let rarity = 'common';
+  for (const [r, w] of Object.entries(RARITY_WEIGHTS)) {
+    cumulative += w;
+    if (rand <= cumulative) { rarity = r; break; }
+  }
+  const pool = SKINS.filter(s => s.rarity === rarity);
+  return pool[Math.floor(Math.random() * pool.length)];
+}
+
+async function getInventory(uid) {
+  try { const d = await getDoc(doc(db, 'inventory', uid)); return d.exists() ? d.data().skins || [] : []; }
+  catch (e) { return []; }
+}
+async function saveInventory(uid, skins) {
+  try { await setDoc(doc(db, 'inventory', uid), { skins }); } catch (e) {}
+}
+async function getEquippedSkin(uid) {
+  try { const d = await getDoc(doc(db, 'equipped', uid)); return d.exists() ? d.data().skinId : null; }
+  catch (e) { return null; }
+}
+async function saveEquippedSkin(uid, skinId) {
+  try { await setDoc(doc(db, 'equipped', uid), { skinId }); } catch (e) {}
+}
   try { await setDoc(doc(db, 'coins', uid), { amount }); } catch (e) {}
 }
 async function getProfile(uid) { try { const d = await getDoc(doc(db, 'profiles', uid)); return d.exists() ? d.data() : null; } catch (e) { return null; } }
@@ -427,6 +470,32 @@ io.on('connection', (socket) => {
   socket.on('saveProfile', async ({ uid, nickname, emoji, color }) => { await saveProfile(uid, { uid, nickname, emoji, color }); socket.emit('profileSaved'); });
   socket.on('getProfile', async ({ uid }) => { socket.emit('profileData', await getProfile(uid)); });
   socket.on('getCoins', async ({ uid }) => { socket.emit('coinsData', await getCoins(uid)); });
+  socket.on('getInventory', async ({ uid }) => {
+    const inv = await getInventory(uid);
+    const equipped = await getEquippedSkin(uid);
+    socket.emit('inventoryData', { inventory: inv, equipped });
+  });
+
+  socket.on('openBox', async ({ uid }) => {
+    const BOX_COST = 200;
+    const currentCoins = await getCoins(uid);
+    if (currentCoins < BOX_COST) { socket.emit('error', '코인이 부족합니다!'); return; }
+
+    const newCoins = currentCoins - BOX_COST;
+    await saveCoins(uid, newCoins);
+
+    const wonSkin = rollSkin();
+    const inv = await getInventory(uid);
+    inv.push(wonSkin.id);
+    await saveInventory(uid, inv);
+
+    socket.emit('boxResult', { skin: wonSkin, newCoins });
+  });
+
+  socket.on('equipSkin', async ({ uid, skinId }) => {
+    await saveEquippedSkin(uid, skinId);
+    socket.emit('equipped', { skinId });
+  });
 
   socket.on('createRoom', ({ roomCode, nickname, emoji, color, uid, settings }) => {
     if (!uid) { socket.emit('error', '로그인이 필요합니다.'); return; }
