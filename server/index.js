@@ -553,5 +553,6 @@ io.on('connection', (socket) => {
       io.to(rc).emit('roomUpdate', r);
     }
   });
+});
 
 server.listen(4000, () => console.log('서버 실행 중: http://localhost:4000'));
