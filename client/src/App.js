@@ -334,6 +334,7 @@ function App() {
       setCoins(d.newCoins); 
       setBoxResult(d.skin);
       setInventory(prev => [...prev, d.skin.id]);
+      setBoxOpening(true);
     });
     socket.on('equipped', d => setEquipped(d.skinId));
     socket.on('roomUpdate', r => { setPlayers(r.players); setIsHost(r.host === socket.id); setRSet(r.settings); setScreen(s => ['main','createRoom','joinRoom','quickWait'].includes(s) ? 'room' : s); });
@@ -440,11 +441,82 @@ const equipSkin = (skinId) => {
         <Btn bg="linear-gradient(135deg,#3498db,#2980b9)" shadow="rgba(52,152,219,0.3)" onClick={() => { setErr(''); setScreen('joinRoom'); }}>🚪 방 입장</Btn>
         <Btn bg="linear-gradient(135deg,#f39c12,#e67e22)" shadow="rgba(243,156,18,0.3)" onClick={quickMatch}>⚡ 퀵매칭</Btn>
         <Btn bg="linear-gradient(135deg,#9b59b6,#8e44ad)" shadow="rgba(155,89,182,0.3)" onClick={() => { socket.emit('getRankings'); setScreen('rankings'); }}>🏆 랭킹</Btn>
+        <Btn bg="linear-gradient(135deg,#ffd700,#ff9500)" shadow="rgba(255,215,0,0.3)" onClick={() => { socket.emit('getInventory', { uid: user.uid }); setScreen('shop'); }}>🎁 상점</Btn>
         <Btn bg="rgba(255,255,255,0.15)" shadow="rgba(0,0,0,0.05)" onClick={logout} style={{ fontSize: 14 }}><span style={{ color: 'rgba(255,255,255,0.5)' }}>로그아웃</span></Btn>
       </Page>
     );
   }
 
+/* ═══ 상점 ═══ */
+  if (screen === 'shop') {
+    return (
+      <Page center={false}>
+        {boxOpening && boxResult && <BoxOpenAnim result={getSkin(boxResult.id) ? { ...getSkin(boxResult.id) } : boxResult} onClose={() => { setBoxOpening(false); setBoxResult(null); }} />}
+        <h1 style={{ textAlign: 'center', fontSize: 28, fontWeight: 900, color: '#fff', margin: '20px 0 4px' }}>🎁 상점</h1>
+        <p style={{ textAlign: 'center', fontSize: 13, color: 'rgba(255,255,255,0.6)', marginBottom: 16 }}>스킨 상자를 열어 프로필을 꾸며보세요!</p>
+
+        <Card style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '14px 20px', background: 'linear-gradient(135deg, #fff9e6, #fff3cd)' }}>
+          <span style={{ fontSize: 28 }}>🪙</span>
+          <div style={{ flex: 1 }}>
+            <div style={{ fontWeight: 900, fontSize: 20, color: '#d4a017' }}>{coins.toLocaleString()}</div>
+            <div style={{ fontSize: 11, color: '#999' }}>보유 MF코인</div>
+          </div>
+        </Card>
+
+        <Card style={{ textAlign: 'center', padding: 28 }}>
+          <div style={{ fontSize: 64, marginBottom: 12 }}>📦</div>
+          <div style={{ fontWeight: 900, fontSize: 20, marginBottom: 4 }}>프로필 스킨 상자</div>
+          <div style={{ fontSize: 13, color: '#999', marginBottom: 16 }}>랜덤 프로필 테두리 스킨 획득!</div>
+          <div style={{ display: 'flex', justifyContent: 'center', gap: 10, marginBottom: 16, flexWrap: 'wrap' }}>
+            {Object.entries(RARITY_COLOR).map(([r, c]) => (
+              <span key={r} style={{ fontSize: 10, fontWeight: 700, color: c, border: `1px solid ${c}`, padding: '3px 8px', borderRadius: 6 }}>{RARITY_LABEL[r]}</span>
+            ))}
+          </div>
+          <Btn bg="linear-gradient(135deg,#ffd700,#ff9500)" shadow="rgba(255,215,0,0.4)" onClick={openBox}>
+            🪙 200 코인으로 열기
+          </Btn>
+        </Card>
+
+        {err && <Card style={{ background: 'rgba(231,76,60,0.1)', border: '1px solid rgba(231,76,60,0.3)' }}><p style={{ color: '#e74c3c', textAlign: 'center', fontWeight: 600, margin: 0 }}>{err}</p></Card>}
+
+        <div style={{ fontSize: 13, fontWeight: 700, color: '#fff', marginBottom: 10, marginTop: 8 }}>🎒 보유 스킨 ({inventory.length})</div>
+        <Card>
+          {inventory.length === 0 ? (
+            <p style={{ textAlign: 'center', color: '#999', padding: 20 }}>아직 보유한 스킨이 없어요!</p>
+          ) : (
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(90px, 1fr))', gap: 10 }}>
+              {[...new Set(inventory)].map(skinId => {
+                const skin = getSkin(skinId);
+                if (!skin) return null;
+                const isEquipped = equipped === skinId;
+                const count = inventory.filter(s => s === skinId).length;
+                return (
+                  <div key={skinId} onClick={() => equipSkin(skinId)} style={{ textAlign: 'center', cursor: 'pointer', padding: 8, borderRadius: 12, background: isEquipped ? `${RARITY_COLOR[skin.rarity]}22` : '#f8f8f8', border: isEquipped ? `2px solid ${RARITY_COLOR[skin.rarity]}` : '2px solid transparent' }}>
+                    <div style={{ position: 'relative', display: 'inline-block' }}>
+                      <Avatar emoji="🎭" color="#667eea" size={48} skinId={skinId} />
+                      {count > 1 && <span style={{ position: 'absolute', bottom: -4, right: -4, background: '#333', color: '#fff', fontSize: 10, fontWeight: 700, borderRadius: 8, padding: '1px 5px' }}>x{count}</span>}
+                    </div>
+                    <div style={{ fontSize: 10, fontWeight: 700, color: RARITY_COLOR[skin.rarity], marginTop: 4 }}>{skin.name}</div>
+                    {isEquipped && <div style={{ fontSize: 9, color: RARITY_COLOR[skin.rarity], fontWeight: 900 }}>장착중</div>}
+                  </div>
+                );
+              })}
+            </div>
+          )}
+          {equipped && (
+            <Btn bg="#e0e0e0" shadow="rgba(0,0,0,0.05)" onClick={() => equipSkin(null)} style={{ marginTop: 12, marginBottom: 0 }}>
+              <span style={{ color: '#888' }}>테두리 해제</span>
+            </Btn>
+          )}
+        </Card>
+
+        <Btn bg="rgba(255,255,255,0.15)" shadow="rgba(0,0,0,0.05)" onClick={() => { setScreen('main'); setErr(''); }} style={{ marginTop: 4 }}>
+          <span style={{ color: 'rgba(255,255,255,0.6)' }}>← 돌아가기</span>
+        </Btn>
+      </Page>
+    );
+  }
+  
   /* ═══ 프로필 ═══ */
   if (screen === 'profile') {
     return (
