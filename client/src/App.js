@@ -426,7 +426,7 @@ function App() {
         <MuteB />
         {ctx && <CtxMenu {...ctx} isHost={isHost} onKick={() => kick(ctx.player.id)} onInfo={() => getInfo(ctx.player.id)} onClose={() => setCtx(null)} />}
         {pInfo && <InfoModal info={pInfo} onClose={() => setPInfo(null)} />}
-        <div style={{ maxWidth: 460, margin: '0 auto', padding: 20 }}>
+        <div style={{ maxWidth: 700, margin: '0 auto', padding: 20 }}>
           <h1 style={{ textAlign: 'center', fontSize: 24, fontWeight: 900, marginBottom: 12 }}>대기실</h1>
           <DCard style={{ textAlign: 'center' }}>
             <div style={{ fontSize: 12, color: '#888', marginBottom: 4 }}>방 코드</div>
@@ -443,18 +443,22 @@ function App() {
             </div>
           )}
           <p style={{ fontSize: 11, color: '#444', marginBottom: 8 }}>💡 우클릭 → 정보/추방</p>
-          {players.map((p, i) => (
-            <DCard key={p.id} style={{ display: 'flex', alignItems: 'center', gap: 12, cursor: 'context-menu' }} onContextMenu={e => ctxMenu(e, p)}>
-              <Avatar emoji={p.emoji} color={p.color} size={40} />
-              <div style={{ flex: 1 }}>
-                <span style={{ fontWeight: 700 }}>{p.nickname}</span>
-                {p.id === socket.id && <span style={{ color: '#555', fontSize: 11, marginLeft: 6 }}>(나)</span>}
-                {i === 0 && <span style={{ color: '#f39c12', fontSize: 11, marginLeft: 6 }}>👑</span>}
-              </div>
-              {p.isBot && <span style={{ fontSize: 11, color: '#9b59b6', background: 'rgba(155,89,182,0.1)', padding: '2px 8px', borderRadius: 6 }}>🤖 봇</span>}
-              {!p.uid && !p.isBot && <span style={{ fontSize: 11, color: '#f39c12', background: 'rgba(243,156,18,0.1)', padding: '2px 8px', borderRadius: 6 }}>게스트</span>}
-            </DCard>
-          ))}
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))', gap: 8 }}>
+            {players.map((p, i) => (
+              <DCard key={p.id} style={{ display: 'flex', alignItems: 'center', gap: 10, cursor: 'context-menu', marginBottom: 0, padding: 10 }} onContextMenu={e => ctxMenu(e, p)}>
+                <Avatar emoji={p.emoji} color={p.color} size={36} />
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ fontWeight: 700, fontSize: 13, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                    {p.nickname}
+                    {p.id === socket.id && <span style={{ color: '#555', fontSize: 10, marginLeft: 4 }}>(나)</span>}
+                    {i === 0 && <span style={{ color: '#f39c12', fontSize: 10, marginLeft: 4 }}>👑</span>}
+                  </div>
+                  {p.isBot && <span style={{ fontSize: 10, color: '#9b59b6', background: 'rgba(155,89,182,0.1)', padding: '1px 6px', borderRadius: 5 }}>🤖 봇</span>}
+                  {!p.uid && !p.isBot && <span style={{ fontSize: 10, color: '#f39c12', background: 'rgba(243,156,18,0.1)', padding: '1px 6px', borderRadius: 5 }}>게스트</span>}
+                </div>
+              </DCard>
+            ))}
+          </div>
           {isHost ? <Btn bg="linear-gradient(135deg,#e74c3c,#c0392b)" shadow="rgba(231,76,60,0.3)" onClick={startGame} style={{ marginTop: 12 }}>🎮 게임 시작 (최소 5명)</Btn>
             : <p style={{ textAlign: 'center', color: '#555', marginTop: 16, fontSize: 14 }}>⏳ 방장 대기 중...</p>}
         </div>
@@ -472,7 +476,7 @@ function App() {
         {olay && <Overlay event={olay} onDone={hideOlay} />}
         {ctx && <CtxMenu {...ctx} isHost={isHost} onKick={() => kick(ctx.player.id)} onInfo={() => getInfo(ctx.player.id)} onClose={() => setCtx(null)} />}
         {pInfo && <InfoModal info={pInfo} onClose={() => setPInfo(null)} />}
-        <div style={{ flex: 1, overflowY: 'auto', maxWidth: 460, margin: '0 auto', width: '100%', padding: 16 }}>
+        <div style={{ flex: 1, overflowY: 'auto', maxWidth: 900, margin: '0 auto', width: '100%', padding: 16 }}>
           <div style={{ textAlign: 'center', padding: 14, background: 'rgba(255,255,255,0.03)', borderRadius: 16, border: '1px solid rgba(255,255,255,0.08)', marginBottom: 12 }}>
             <div style={{ fontSize: 12, color: '#888', letterSpacing: 1, marginBottom: 4 }}>{phase === 'day' ? '☀️ 낮' : phase === 'vote' ? '🗳️ 투표' : '🌙 밤'}</div>
             <div style={{ fontSize: 40, fontWeight: 900, color: tLeft <= 10 ? '#e74c3c' : tLeft <= 30 ? '#f39c12' : '#2ecc71' }}>{tLeft}초</div>
@@ -489,39 +493,43 @@ function App() {
           </DCard>
           {police && <DCard style={{ background: 'rgba(52,152,219,0.15)', border: '1px solid rgba(52,152,219,0.3)', color: '#3498db', fontWeight: 700, textAlign: 'center' }}>{police}</DCard>}
           <Header dark>생존자 ({alive.length})</Header>
-          {alive.map(p => {
-            const vf = votersFor(p.id);
-            return (
-              <DCard key={p.id} onContextMenu={e => ctxMenu(e, p)} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderColor: votes[socket.id] === p.id ? '#f39c12' : undefined }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 10, flex: 1, minWidth: 0 }}>
-                  <Avatar emoji={p.emoji} color={p.color} size={38} />
-                  <div style={{ minWidth: 0 }}>
-                    <div style={{ fontWeight: 700, fontSize: 14 }}>{p.nickname} {p.id === socket.id && <span style={{ color: '#555', fontSize: 11 }}>(나)</span>}</div>
-                    {vf.length > 0 && <div style={{ display: 'flex', gap: 2, marginTop: 3, flexWrap: 'wrap', alignItems: 'center' }}>
-                      {vf.map(v => <span key={v.voterId} title={v.voterNickname} style={{ width: 18, height: 18, borderRadius: '50%', background: v.voterColor || '#333', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', fontSize: 9, border: '1px solid rgba(255,255,255,0.2)' }}>{v.voterEmoji}</span>)}
-                      <span style={{ color: '#f39c12', fontSize: 12, fontWeight: 700, marginLeft: 4 }}>{vf.length}표</span>
-                    </div>}
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: 8 }}>
+            {alive.map(p => {
+              const vf = votersFor(p.id);
+              return (
+                <DCard key={p.id} onContextMenu={e => ctxMenu(e, p)} style={{ display: 'flex', flexDirection: 'column', gap: 8, borderColor: votes[socket.id] === p.id ? '#f39c12' : undefined, marginBottom: 0, padding: 10 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, minWidth: 0 }}>
+                    <Avatar emoji={p.emoji} color={p.color} size={32} />
+                    <div style={{ minWidth: 0, flex: 1 }}>
+                      <div style={{ fontWeight: 700, fontSize: 13, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{p.nickname} {p.id === socket.id && <span style={{ color: '#555', fontSize: 10 }}>(나)</span>}</div>
+                      {vf.length > 0 && <div style={{ display: 'flex', gap: 2, marginTop: 2, flexWrap: 'wrap', alignItems: 'center' }}>
+                        {vf.map(v => <span key={v.voterId} title={v.voterNickname} style={{ width: 15, height: 15, borderRadius: '50%', background: v.voterColor || '#333', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', fontSize: 8, border: '1px solid rgba(255,255,255,0.2)' }}>{v.voterEmoji}</span>)}
+                        <span style={{ color: '#f39c12', fontSize: 10, fontWeight: 700, marginLeft: 2 }}>{vf.length}표</span>
+                      </div>}
+                    </div>
                   </div>
-                </div>
-                <div style={{ display: 'flex', gap: 6, flexShrink: 0 }}>
-                  {phase === 'vote' && amA && p.id !== socket.id && !myVote && <BtnSm bg="#e74c3c" onClick={() => vote(p.id)}>투표</BtnSm>}
-                  {phase === 'night' && amA && p.id !== socket.id && !myVote && <>
-                    {myRole === '마피아' && <BtnSm bg="#e74c3c" onClick={() => nightAct(p.id)}>🔪</BtnSm>}
-                    {myRole === '의사' && <BtnSm bg="#2ecc71" onClick={() => nightAct(p.id)}>💊</BtnSm>}
-                    {myRole === '경찰' && <BtnSm bg="#3498db" onClick={() => nightAct(p.id)}>🔍</BtnSm>}
-                  </>}
-                </div>
-              </DCard>
-            );
-          })}
-          {myVote && <DCard style={{ textAlign: 'center', color: '#2ecc71', fontWeight: 700 }}>✅ 대기 중...</DCard>}
-          {!amA && <DCard style={{ textAlign: 'center', color: '#666' }}>💀 사망</DCard>}
+                  <div style={{ display: 'flex', gap: 4 }}>
+                    {phase === 'vote' && amA && p.id !== socket.id && !myVote && <BtnSm bg="#e74c3c" onClick={() => vote(p.id)}>투표</BtnSm>}
+                    {phase === 'night' && amA && p.id !== socket.id && !myVote && <>
+                      {myRole === '마피아' && <BtnSm bg="#e74c3c" onClick={() => nightAct(p.id)}>🔪</BtnSm>}
+                      {myRole === '의사' && <BtnSm bg="#2ecc71" onClick={() => nightAct(p.id)}>💊</BtnSm>}
+                      {myRole === '경찰' && <BtnSm bg="#3498db" onClick={() => nightAct(p.id)}>🔍</BtnSm>}
+                    </>}
+                  </div>
+                </DCard>
+              );
+            })}
+          </div>
+          {myVote && <DCard style={{ textAlign: 'center', color: '#2ecc71', fontWeight: 700, marginTop: 10 }}>✅ 대기 중...</DCard>}
+          {!amA && <DCard style={{ textAlign: 'center', color: '#666', marginTop: 10 }}>💀 사망</DCard>}
           {dead.length > 0 && <>
             <Header dark>사망자 ({dead.length})</Header>
-            {dead.map(p => <DCard key={p.id} style={{ display: 'flex', alignItems: 'center', gap: 10, opacity: 0.4 }}><Avatar emoji={p.emoji} color={p.color} size={32} /><span style={{ color: '#555', fontWeight: 700 }}>{p.nickname}</span><span style={{ marginLeft: 'auto' }}>💀</span></DCard>)}
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(150px, 1fr))', gap: 6 }}>
+              {dead.map(p => <DCard key={p.id} style={{ display: 'flex', alignItems: 'center', gap: 8, opacity: 0.4, marginBottom: 0, padding: 8 }}><Avatar emoji={p.emoji} color={p.color} size={28} /><span style={{ color: '#555', fontWeight: 700, fontSize: 12, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{p.nickname}</span><span style={{ marginLeft: 'auto' }}>💀</span></DCard>)}
+            </div>
           </>}
         </div>
-        <div style={{ maxWidth: 460, margin: '0 auto', width: '100%' }}>
+        <div style={{ maxWidth: 900, margin: '0 auto', width: '100%' }}>
           <ChatBox msgs={msgs} input={chatIn} setInput={setChatIn} onSend={sendChat} phase={phase} role={myRole} />
         </div>
       </div>

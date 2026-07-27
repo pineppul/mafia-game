@@ -87,11 +87,21 @@ function getBotChat(role, phase) {
   return null;
 }
 
-function createBot() {
+function createBot(roomCode) {
+  const room = rooms[roomCode];
+  const usedNames = room ? room.players.filter(p => p.isBot).map(p => p.nickname) : [];
+  
+  let nickname, tries = 0;
+  do {
+    const nameIdx = Math.floor(Math.random() * BOT_NAMES.length);
+    const num = Math.floor(Math.random() * 900) + 100;
+    nickname = `봇_${BOT_NAMES[nameIdx]}${num}`;
+    tries++;
+  } while (usedNames.includes(nickname) && tries < 20);
+
   const id = `bot_${botCounter++}`;
-  const nameIdx = Math.floor(Math.random() * BOT_NAMES.length);
   return {
-    id, nickname: `봇_${BOT_NAMES[nameIdx]}`, isBot: true, uid: null, score: 0,
+    id, nickname, isBot: true, uid: null, score: 0,
     emoji: BOT_EMOJIS[Math.floor(Math.random() * BOT_EMOJIS.length)],
     color: BOT_COLORS[Math.floor(Math.random() * BOT_COLORS.length)]
   };
@@ -427,7 +437,7 @@ io.on('connection', (socket) => {
     if (room.host !== socket.id) { socket.emit('error', '방장만 봇 추가 가능!'); return; }
     if (room.started) { socket.emit('error', '이미 시작됨!'); return; }
     if (room.players.length >= room.settings.maxPlayers) { socket.emit('error', '꽉 찼습니다!'); return; }
-    const bot = createBot();
+    const bot = createBot(roomCode);
     room.players.push(bot);
     io.to(roomCode).emit('roomUpdate', room);
     io.to(roomCode).emit('chatMessage', { nickname: '시스템', type: 'system', emoji: '🤖', message: `${bot.emoji} ${bot.nickname} 봇이 입장했습니다!` });
