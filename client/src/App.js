@@ -293,7 +293,7 @@ function App() {
   const [equipped, setEquipped] = useState(null);
   const [boxOpening, setBoxOpening] = useState(false);
   const [boxResult, setBoxResult] = useState(null);
-  const [revealStage, setRevealStage] = useState(0);
+  const [, setRevealStage] = useState(0);
   const [emoji, setEmoji] = useState('🎭');
   const [color, setColor] = useState('#667eea');
   const [code, setCode] = useState('');
