@@ -219,9 +219,8 @@ function App() {
 
   const hideOlay = useCallback(() => setOlay(null), []);
 
-  useEffect(() => { const u = onAuthStateChanged(auth, u => { setUser(u); setLoading(false); if (u) { setNick(u.displayName || ''); socket.emit('getProfile', { uid: u.uid }); } }); return () => u(); }, []);
-  socket.emit('getCoins', { uid: u.uid });
-
+  useEffect(() => { const u = onAuthStateChanged(auth, u => { setUser(u); setLoading(false); if (u) { setNick(u.displayName || ''); socket.emit('getProfile', { uid: u.uid }); socket.emit('getCoins', { uid: u.uid }); } }); return () => u(); }, []);
+  
   useEffect(() => {
     socket.on('profileData', p => { if (p) { setNick(p.nickname || ''); setEmoji(p.emoji || '🎭'); setColor(p.color || '#667eea'); } });
     socket.on('coinsData', c => setCoins(c));
