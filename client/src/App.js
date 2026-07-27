@@ -216,6 +216,11 @@ function App() {
   const [screen, setScreen] = useState('main');
   const [nick, setNick] = useState('');
   const [coins, setCoins] = useState(0);
+  const [inventory, setInventory] = useState([]);
+  const [equipped, setEquipped] = useState(null);
+  const [boxOpening, setBoxOpening] = useState(false);
+  const [boxResult, setBoxResult] = useState(null);
+  const [revealStage, setRevealStage] = useState(0);
   const [emoji, setEmoji] = useState('🎭');
   const [color, setColor] = useState('#667eea');
   const [code, setCode] = useState('');
@@ -246,10 +251,18 @@ function App() {
   const hideOlay = useCallback(() => setOlay(null), []);
 
   useEffect(() => { const u = onAuthStateChanged(auth, u => { setUser(u); setLoading(false); if (u) { setNick(u.displayName || ''); socket.emit('getProfile', { uid: u.uid }); socket.emit('getCoins', { uid: u.uid }); } }); return () => u(); }, []);
+  socket.emit('getInventory', { uid: u.uid });
   
   useEffect(() => {
     socket.on('profileData', p => { if (p) { setNick(p.nickname || ''); setEmoji(p.emoji || '🎭'); setColor(p.color || '#667eea'); } });
     socket.on('coinsData', c => setCoins(c));
+    socket.on('inventoryData', d => { setInventory(d.inventory); setEquipped(d.equipped); });
+    socket.on('boxResult', d => { 
+      setCoins(d.newCoins); 
+      setBoxResult(d.skin);
+      setInventory(prev => [...prev, d.skin.id]);
+    });
+    socket.on('equipped', d => setEquipped(d.skinId));
     socket.on('roomUpdate', r => { setPlayers(r.players); setIsHost(r.host === socket.id); setRSet(r.settings); setScreen(s => ['main','createRoom','joinRoom','quickWait'].includes(s) ? 'room' : s); });
     socket.on('gameState', d => { setPhase(d.phase); setPlayers(d.players); setMyRole(d.myRole); setMyVote(''); setScreen('game'); if (d.settings) setTTotal(d.phase === 'day' ? d.settings.dayTime : d.phase === 'vote' ? d.settings.voteTime : d.settings.nightTime); });
     socket.on('timerUpdate', d => { setTLeft(d.timeLeft); setPhase(d.phase); });
