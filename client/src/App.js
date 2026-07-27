@@ -189,6 +189,7 @@ function App() {
   const [loading, setLoading] = useState(true);
   const [screen, setScreen] = useState('main');
   const [nick, setNick] = useState('');
+  const [coins, setCoins] = useState(0);
   const [emoji, setEmoji] = useState('🎭');
   const [color, setColor] = useState('#667eea');
   const [code, setCode] = useState('');
@@ -219,9 +220,11 @@ function App() {
   const hideOlay = useCallback(() => setOlay(null), []);
 
   useEffect(() => { const u = onAuthStateChanged(auth, u => { setUser(u); setLoading(false); if (u) { setNick(u.displayName || ''); socket.emit('getProfile', { uid: u.uid }); } }); return () => u(); }, []);
+  socket.emit('getCoins', { uid: u.uid });
 
   useEffect(() => {
     socket.on('profileData', p => { if (p) { setNick(p.nickname || ''); setEmoji(p.emoji || '🎭'); setColor(p.color || '#667eea'); } });
+    socket.on('coinsData', c => setCoins(c));
     socket.on('roomUpdate', r => { setPlayers(r.players); setIsHost(r.host === socket.id); setRSet(r.settings); setScreen(s => ['main','createRoom','joinRoom','quickWait'].includes(s) ? 'room' : s); });
     socket.on('gameState', d => { setPhase(d.phase); setPlayers(d.players); setMyRole(d.myRole); setMyVote(''); setScreen('game'); if (d.settings) setTTotal(d.phase === 'day' ? d.settings.dayTime : d.phase === 'vote' ? d.settings.voteTime : d.settings.nightTime); });
     socket.on('timerUpdate', d => { setTLeft(d.timeLeft); setPhase(d.phase); });
@@ -292,13 +295,21 @@ function App() {
         <h1 style={{ textAlign: 'center', fontSize: 32, fontWeight: 900, color: '#fff', textShadow: '0 4px 20px rgba(0,0,0,0.3)', marginBottom: 4 }}>마피아 게임</h1>
         <p style={{ textAlign: 'center', fontSize: 13, color: 'rgba(255,255,255,0.6)', marginBottom: 24 }}>Real-time Mafia Game</p>
 
-        <Card style={{ display: 'flex', alignItems: 'center', gap: 14, cursor: 'pointer' }} onClick={() => setScreen('profile')}>
+<Card style={{ display: 'flex', alignItems: 'center', gap: 14, cursor: 'pointer' }} onClick={() => setScreen('profile')}>
           <Avatar emoji={emoji} color={color} size={52} />
           <div style={{ flex: 1 }}>
             <div style={{ fontWeight: 800, fontSize: 17 }}>{nick || '프로필 설정 필요'}</div>
             <div style={{ fontSize: 12, color: '#aaa' }}>✏️ 탭하여 수정</div>
           </div>
           <div style={{ fontSize: 20, color: '#ccc' }}>›</div>
+        </Card>
+
+        <Card style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '14px 20px', background: 'linear-gradient(135deg, #fff9e6, #fff3cd)' }}>
+          <span style={{ fontSize: 28 }}>🪙</span>
+          <div style={{ flex: 1 }}>
+            <div style={{ fontWeight: 900, fontSize: 20, color: '#d4a017' }}>{coins.toLocaleString()}</div>
+            <div style={{ fontSize: 11, color: '#999' }}>MF코인</div>
+          </div>
         </Card>
 
         {err && <Card style={{ background: 'rgba(231,76,60,0.1)', border: '1px solid rgba(231,76,60,0.3)' }}><p style={{ color: '#e74c3c', textAlign: 'center', fontWeight: 600, margin: 0 }}>{err}</p></Card>}

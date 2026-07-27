@@ -232,6 +232,13 @@ loadRankings();
 
 async function saveRanking(uid, data) { try { await setDoc(doc(db, 'rankings', uid), data); } catch (e) {} }
 async function saveProfile(uid, data) { try { await setDoc(doc(db, 'profiles', uid), data); } catch (e) {} }
+async function getCoins(uid) {
+  try { const d = await getDoc(doc(db, 'coins', uid)); return d.exists() ? d.data().amount : 0; }
+  catch (e) { return 0; }
+}
+async function saveCoins(uid, amount) {
+  try { await setDoc(doc(db, 'coins', uid), { amount }); } catch (e) {}
+}
 async function getProfile(uid) { try { const d = await getDoc(doc(db, 'profiles', uid)); return d.exists() ? d.data() : null; } catch (e) { return null; } }
 
 function assignRoles(players, settings) {
@@ -366,6 +373,8 @@ async function endGame(roomCode, winner) {
   if (room.timer) clearInterval(room.timer);
   if (room.botChatTimer) clearInterval(room.botChatTimer);
 
+  const coinResults = {};
+
   for (const p of room.players) {
     if (p.isBot || !p.uid) continue;
     if (!rankings[p.uid]) rankings[p.uid] = { uid: p.uid, nickname: p.nickname, emoji: p.emoji, color: p.color, score: 0, wins: 0, losses: 0, games: 0 };
@@ -375,9 +384,17 @@ async function endGame(roomCode, winner) {
     if (won) { rankings[p.uid].wins++; rankings[p.uid].score += isMafia ? 15 : 10; }
     else { rankings[p.uid].losses++; rankings[p.uid].score = Math.max(0, rankings[p.uid].score - 5); }
     await saveRanking(p.uid, rankings[p.uid]);
+
+    // MF코인 지급
+    const coinsEarned = won ? 100 : 20;
+    const currentCoins = await getCoins(p.uid);
+    const newCoins = currentCoins + coinsEarned;
+    await saveCoins(p.uid, newCoins);
+    coinResults[p.uid] = { earned: coinsEarned, total: newCoins, won };
   }
+
   const rankingList = Object.values(rankings).sort((a, b) => b.score - a.score);
-  io.to(roomCode).emit('gameOver', { winner, players: room.players, rankings: rankingList });
+  io.to(roomCode).emit('gameOver', { winner, players: room.players, rankings: rankingList, coinResults });
 }
 
 function processQuickQueue() {
@@ -409,6 +426,7 @@ io.on('connection', (socket) => {
   socket.on('getRankings', () => { socket.emit('rankingsList', Object.values(rankings).sort((a, b) => b.score - a.score)); });
   socket.on('saveProfile', async ({ uid, nickname, emoji, color }) => { await saveProfile(uid, { uid, nickname, emoji, color }); socket.emit('profileSaved'); });
   socket.on('getProfile', async ({ uid }) => { socket.emit('profileData', await getProfile(uid)); });
+  socket.on('getCoins', async ({ uid }) => { socket.emit('coinsData', await getCoins(uid)); });
 
   socket.on('createRoom', ({ roomCode, nickname, emoji, color, uid, settings }) => {
     if (!uid) { socket.emit('error', '로그인이 필요합니다.'); return; }
