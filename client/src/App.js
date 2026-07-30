@@ -307,6 +307,7 @@ function App() {
   const [myVote, setMyVote] = useState('');
   const [police, setPolice] = useState('');
   const [over, setOver] = useState(null);
+  const [myCoinResult, setMyCoinResult] = useState(null);
   const [ranks, setRanks] = useState([]);
   const [lRanks, setLRanks] = useState([]);
   const [msgs, setMsgs] = useState([]);
@@ -343,7 +344,7 @@ function App() {
     socket.on('phaseChange', d => { setPhase(d.phase); setMyVote(''); setVotes({}); setVoteD({}); setPolice(''); setOlay(d); if (!mute) { if (d.event === 'nightKill' || d.event === 'eliminated') snd('death'); else if (d.event === 'healed') snd('heal'); else if (d.phase === 'night') snd('night'); else snd('day'); } });
     socket.on('policeResult', d => setPolice(`🔍 ${d.emoji} ${d.nickname} → [${d.role}]`));
     socket.on('chatMessage', d => setMsgs(p => [...p, d]));
-    socket.on('gameOver', d => { setPlayers(d.players); setOver(d.winner); setRanks(d.rankings); setScreen('gameover'); if (!mute) snd(d.winner === '시민' ? 'win' : 'lose'); });
+   socket.on('gameOver', d => { setPlayers(d.players); setOver(d.winner); setRanks(d.rankings); setScreen('gameover'); if (!mute) snd(d.winner === '시민' ? 'win' : 'lose'); if (d.coinResults && user) { const my = d.coinResults[user.uid]; if (my) { setMyCoinResult(my); setCoins(my.total); } } });
     socket.on('rankingsList', l => setLRanks(l));
     socket.on('playerInfo', i => setPInfo(i));
     socket.on('kicked', () => { setErr('추방되었습니다'); setScreen('main'); });
