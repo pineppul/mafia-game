@@ -354,7 +354,7 @@ function App() {
     socket.on('quickMatchStatus', s => { setQStat(s); if (s.status === 'waiting') setScreen('quickWait'); });
     socket.on('error', m => setErr(m));
     return () => { ['profileData','roomUpdate','gameState','timerUpdate','voteUpdate','phaseChange','policeResult','chatMessage','gameOver','rankingsList','playerInfo','kicked','quickMatchFound','quickMatchStatus','error'].forEach(e => socket.off(e)); };
-  }, [mute]);
+  }, [mute, user]);
 
   const login = async () => { try { await signInWithPopup(auth, gProvider); } catch (e) { setErr('로그인 실패: ' + e.message); } };
   const logout = async () => { await signOut(auth); setScreen('main'); };
