@@ -301,6 +301,7 @@ function App() {
   const [players, setPlayers] = useState([]);
   const [isHost, setIsHost] = useState(false);
   const [myRole, setMyRole] = useState('');
+  const [roleHidden, setRoleHidden] = useState(false);
   const [phase, setPhase] = useState('day');
   const [votes, setVotes] = useState({});
   const [voteD, setVoteD] = useState({});
@@ -338,7 +339,7 @@ function App() {
     });
     socket.on('equipped', d => setEquipped(d.skinId));
     socket.on('roomUpdate', r => { setPlayers(r.players); setIsHost(r.host === socket.id); setRSet(r.settings); setScreen(s => ['main','createRoom','joinRoom','quickWait'].includes(s) ? 'room' : s); });
-    socket.on('gameState', d => { setPhase(d.phase); setPlayers(d.players); setMyRole(d.myRole); setMyVote(''); setScreen('game'); if (d.settings) setTTotal(d.phase === 'day' ? d.settings.dayTime : d.phase === 'vote' ? d.settings.voteTime : d.settings.nightTime); });
+    socket.on('gameState', d => { setPhase(d.phase); setPlayers(d.players); setMyRole(d.myRole); setMyVote(''); setRoleHidden(true); setScreen('game'); if (d.settings) setTTotal(d.phase === 'day' ? d.settings.dayTime : d.phase === 'vote' ? d.settings.voteTime : d.settings.nightTime); });
     socket.on('timerUpdate', d => { setTLeft(d.timeLeft); setPhase(d.phase); });
     socket.on('voteUpdate', d => { setVotes(d.votes); if (d.voteDetails) setVoteD(d.voteDetails); });
     socket.on('phaseChange', d => { setPhase(d.phase); setMyVote(''); setVotes({}); setVoteD({}); setPolice(''); setOlay(d); if (!mute) { if (d.event === 'nightKill' || d.event === 'eliminated') snd('death'); else if (d.event === 'healed') snd('heal'); else if (d.phase === 'night') snd('night'); else snd('day'); } });
@@ -689,9 +690,19 @@ const equipSkin = (skinId) => {
               <div style={{ height: '100%', borderRadius: 2, width: `${tTotal > 0 ? (tLeft / tTotal) * 100 : 0}%`, background: tLeft <= 10 ? '#e74c3c' : tLeft <= 30 ? '#f39c12' : '#2ecc71', transition: 'width 1s linear' }} />
             </div>
           </div>
-          <DCard style={{ textAlign: 'center', borderColor: `${RC[myRole]}44`, background: `${RC[myRole]}11` }}>
-            <div style={{ fontSize: 28 }}>{RE[myRole]}</div>
-            <div style={{ fontSize: 18, fontWeight: 800, color: RC[myRole] }}>내 역할: {myRole}</div>
+          <DCard onClick={() => setRoleHidden(!roleHidden)} style={{ textAlign: 'center', borderColor: `${RC[myRole]}44`, background: `${RC[myRole]}11`, cursor: 'pointer', userSelect: 'none' }}>
+            {roleHidden ? (
+              <>
+                <div style={{ fontSize: 28 }}>🙈</div>
+                <div style={{ fontSize: 16, fontWeight: 800, color: '#888' }}>역할 숨김 — 탭하여 보기</div>
+              </>
+            ) : (
+              <>
+                <div style={{ fontSize: 28 }}>{RE[myRole]}</div>
+                <div style={{ fontSize: 18, fontWeight: 800, color: RC[myRole] }}>내 역할: {myRole}</div>
+                <div style={{ fontSize: 11, color: '#666', marginTop: 4 }}>탭하여 숨기기</div>
+              </>
+            )}
           </DCard>
           <DCard style={{ textAlign: 'center', fontWeight: 700, fontSize: 15 }}>
             {phase === 'day' ? '☀️ 토론하세요!' : phase === 'vote' ? '🗳️ 투표하세요!' : '🌙 역할 수행!'}
