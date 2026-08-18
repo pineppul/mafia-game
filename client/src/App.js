@@ -451,7 +451,7 @@ const equipSkin = (skinId) => {
 /* ═══ 상점 ═══ */
   if (screen === 'shop') {
     return (
-      <Page center={false}>
+      <Page>
         {boxOpening && boxResult && <BoxOpenAnim result={getSkin(boxResult.id) ? { ...getSkin(boxResult.id) } : boxResult} onClose={() => { setBoxOpening(false); setBoxResult(null); }} />}
         <h1 style={{ textAlign: 'center', fontSize: 28, fontWeight: 900, color: '#fff', margin: '20px 0 4px' }}>🎁 상점</h1>
         <p style={{ textAlign: 'center', fontSize: 13, color: 'rgba(255,255,255,0.6)', marginBottom: 16 }}>스킨 상자를 열어 프로필을 꾸며보세요!</p>
@@ -552,7 +552,7 @@ const equipSkin = (skinId) => {
   /* ═══ 방 만들기 ═══ */
   if (screen === 'createRoom') {
     return (
-      <Page center={false}>
+      <Page>
         <h1 style={{ textAlign: 'center', fontSize: 28, fontWeight: 900, color: '#fff', margin: '20px 0' }}>방 만들기</h1>
         <Card>
           <div style={{ marginBottom: 14 }}><Label>방 코드</Label><Input value={code} onChange={e => setCode(e.target.value)} placeholder="예: 1234" /></div>
