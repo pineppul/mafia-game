@@ -471,11 +471,17 @@ io.on('connection', (socket) => {
   socket.on('getProfile', async ({ uid }) => { socket.emit('profileData', await getProfile(uid)); });
   socket.on('getCoins', async ({ uid }) => { socket.emit('coinsData', await getCoins(uid)); });
   socket.on('getInventory', async ({ uid }) => {
-    const inv = await getInventory(uid);
-    const equipped = await getEquippedSkin(uid);
-    socket.emit('inventoryData', { inventory: inv, equipped });
-  });
-
+      try {
+        const invDoc = await getDoc(doc(db, 'inventory', uid));
+        const inv = invDoc.exists() ? (invDoc.data().skins || []) : [];
+        const eqDoc = await getDoc(doc(db, 'equipped', uid));
+        const eq = eqDoc.exists() ? eqDoc.data().skinId : null;
+        socket.emit('inventoryData', { inventory: inv, equipped: eq });
+      } catch (e) {
+        console.log('인벤토리 로드 실패:', e.message);
+        socket.emit('inventoryData', { inventory: [], equipped: null });
+      }
+    });
   socket.on('openBox', async ({ uid }) => {
     const BOX_COST = 200;
     const currentCoins = await getCoins(uid);
