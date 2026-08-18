@@ -545,6 +545,35 @@ io.on('connection', (socket) => {
     io.to(roomCode).emit('chatMessage', { nickname: '시스템', type: 'system', emoji: '🚪', message: `${kicked.emoji} ${kicked.nickname} 퇴장!` });
   });
 
+    socket.on('leaveRoom', ({ roomCode }) => {
+      const room = rooms[roomCode];
+      if (!room) return;
+      const wasHost = room.host === socket.id;
+      room.players = room.players.filter(p => p.id !== socket.id);
+      socket.leave(roomCode);
+
+      if (room.players.length === 0) {
+        if (room.timer) clearInterval(room.timer);
+        if (room.botChatTimer) clearInterval(room.botChatTimer);
+        delete rooms[roomCode];
+        return;
+      }
+
+      if (wasHost) {
+        const newHost = room.players.find(p => !p.isBot);
+        if (newHost) {
+          room.host = newHost.id;
+          io.to(roomCode).emit('chatMessage', { nickname: '시스템', type: 'system', emoji: '👑', message: `${newHost.emoji} ${newHost.nickname} 님이 새 방장이 되었습니다!` });
+        } else {
+          if (room.timer) clearInterval(room.timer);
+          if (room.botChatTimer) clearInterval(room.botChatTimer);
+          delete rooms[roomCode];
+          return;
+        }
+      }
+      io.to(roomCode).emit('roomUpdate', room);
+    });
+
   socket.on('getPlayerInfo', ({ roomCode, targetId }) => {
     const room = rooms[roomCode]; if (!room) return;
     const t = room.players.find(p => p.id === targetId); if (!t) return;
@@ -626,11 +655,18 @@ io.on('connection', (socket) => {
       const wasPlayer = r.players.find(p => p.id === socket.id);
       if (!wasPlayer) continue;
 
-      if (wasHost) {
-        if (r.timer) clearInterval(r.timer);
-        if (r.botChatTimer) clearInterval(r.botChatTimer);
-        io.to(rc).emit('roomClosed', { message: '방장이 나가서 방이 닫혔습니다.' });
-        delete rooms[rc];
+            if (wasHost) {
+        const newHost = r.players.find(p => p.id !== socket.id && !p.isBot);
+        r.players = r.players.filter(p => p.id !== socket.id);
+        if (r.players.length === 0 || !newHost) {
+          if (r.timer) clearInterval(r.timer);
+          if (r.botChatTimer) clearInterval(r.botChatTimer);
+          delete rooms[rc];
+          continue;
+        }
+        r.host = newHost.id;
+        io.to(rc).emit('chatMessage', { nickname: '시스템', type: 'system', emoji: '👑', message: `${newHost.emoji} ${newHost.nickname} 님이 새 방장이 되었습니다!` });
+        io.to(rc).emit('roomUpdate', r);
         continue;
       }
 

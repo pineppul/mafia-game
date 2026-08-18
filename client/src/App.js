@@ -68,8 +68,8 @@ function Card({ children, style, onClick }) {
   return <div onClick={onClick} style={{ background: 'rgba(255,255,255,0.95)', borderRadius: 20, padding: 24, marginBottom: 14, boxShadow: '0 8px 32px rgba(0,0,0,0.12)', ...style }}>{children}</div>;
 }
 
-function DCard({ children, style, onContextMenu }) {
-  return <div onContextMenu={onContextMenu} style={{ background: 'rgba(255,255,255,0.06)', borderRadius: 16, padding: 16, marginBottom: 12, border: '1px solid rgba(255,255,255,0.08)', ...style }}>{children}</div>;
+function DCard({ children, style, onContextMenu, onClick }) {
+  return <div onContextMenu={onContextMenu} onClick={onClick} style={{ background: 'rgba(255,255,255,0.06)', borderRadius: 16, padding: 16, marginBottom: 12, border: '1px solid rgba(255,255,255,0.08)', ...style }}>{children}</div>;
 }
 
 function Btn({ children, bg, shadow = 'rgba(0,0,0,0.1)', onClick, style }) {
@@ -379,6 +379,7 @@ const equipSkin = (skinId) => {
   const nightAct = id => { if (myVote) return; setMyVote(id); socket.emit('nightAction', { roomCode: code, targetId: id }); if (!mute) snd('click'); };
   const sendChat = () => { if (!chatIn.trim()) return; socket.emit('chatMessage', { roomCode: code, message: chatIn }); setChatIn(''); };
   const kick = id => socket.emit('kickPlayer', { roomCode: code, targetId: id });
+  const leaveRoom = () => { socket.emit('leaveRoom', { roomCode: code }); setScreen('main'); };
   const getInfo = id => socket.emit('getPlayerInfo', { roomCode: code, targetId: id });
   const ctxMenu = (e, p) => { e.preventDefault(); setCtx({ x: Math.min(e.clientX, window.innerWidth - 180), y: Math.min(e.clientY, window.innerHeight - 120), player: p }); };
 
@@ -667,6 +668,9 @@ const equipSkin = (skinId) => {
           </div>
           {isHost ? <Btn bg="linear-gradient(135deg,#e74c3c,#c0392b)" shadow="rgba(231,76,60,0.3)" onClick={startGame} style={{ marginTop: 12 }}>🎮 게임 시작 (최소 5명)</Btn>
             : <p style={{ textAlign: 'center', color: '#555', marginTop: 16, fontSize: 14 }}>⏳ 방장 대기 중...</p>}
+          <Btn bg="rgba(255,255,255,0.1)" shadow="rgba(0,0,0,0.05)" onClick={leaveRoom} style={{ marginTop: 8 }}>
+            <span style={{ color: '#e74c3c' }}>🚪 방 나가기</span>
+          </Btn>
         </div>
       </div>
     );
