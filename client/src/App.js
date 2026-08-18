@@ -419,7 +419,7 @@ const equipSkin = (skinId) => {
         <p style={{ textAlign: 'center', fontSize: 13, color: 'rgba(255,255,255,0.6)', marginBottom: 24 }}>Real-time Mafia Game</p>
 
 <Card style={{ display: 'flex', alignItems: 'center', gap: 14, cursor: 'pointer' }} onClick={() => setScreen('profile')}>
-          <Avatar emoji={emoji} color={color} size={52} />
+          <Avatar emoji={emoji} color={color} size={52} skinId={equipped} />
           <div style={{ flex: 1 }}>
             <div style={{ fontWeight: 800, fontSize: 17 }}>{nick || '프로필 설정 필요'}</div>
             <div style={{ fontSize: 12, color: '#aaa' }}>✏️ 탭하여 수정</div>
@@ -759,7 +759,7 @@ const equipSkin = (skinId) => {
           <Header dark>결과</Header>
           {players.map(p => (
             <DCard key={p.id} style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-              <Avatar emoji={p.emoji} color={p.color} size={38} />
+              <Avatar emoji={p.emoji} color={p.color} size={38} skinId={p.id === socket.id ? equipped : null} />
               <div style={{ flex: 1 }}><div style={{ fontWeight: 700 }}>{p.nickname}</div><div style={{ color: RC[p.role], fontSize: 13 }}>{RE[p.role]} {p.role}</div></div>
               <span style={{ fontSize: 20 }}>{p.alive ? '✅' : '💀'}</span>
             </DCard>
