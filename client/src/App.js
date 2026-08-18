@@ -344,7 +344,7 @@ function App() {
     socket.on('phaseChange', d => { setPhase(d.phase); setMyVote(''); setVotes({}); setVoteD({}); setPolice(''); setOlay(d); if (!mute) { if (d.event === 'nightKill' || d.event === 'eliminated') snd('death'); else if (d.event === 'healed') snd('heal'); else if (d.phase === 'night') snd('night'); else snd('day'); } });
     socket.on('policeResult', d => setPolice(`🔍 ${d.emoji} ${d.nickname} → [${d.role}]`));
     socket.on('chatMessage', d => setMsgs(p => [...p, d]));
-   socket.on('gameOver', d => { setPlayers(d.players); setOver(d.winner); setRanks(d.rankings); setScreen('gameover'); if (!mute) snd(d.winner === '시민' ? 'win' : 'lose'); if (d.coinResults && user) { const my = d.coinResults[user.uid]; if (my) { setMyCoinResult(my); setCoins(my.total); } } });
+    socket.on('gameOver', d => { setPlayers(d.players); setOver(d.winner); setRanks(d.rankings); setScreen('gameover'); if (!mute) snd(d.winner === '시민' ? 'win' : 'lose'); if (d.coinResults && user) { const my = d.coinResults[user.uid]; if (my) { setMyCoinResult(my); setCoins(my.total); } } });
     socket.on('rankingsList', l => setLRanks(l));
     socket.on('playerInfo', i => setPInfo(i));
     socket.on('kicked', () => { setErr('추방되었습니다'); setScreen('main'); });
@@ -750,6 +750,11 @@ const equipSkin = (skinId) => {
           <DCard style={{ textAlign: 'center', background: over === '시민' ? 'rgba(46,204,113,0.12)' : 'rgba(231,76,60,0.12)', border: `1px solid ${over === '시민' ? 'rgba(46,204,113,0.3)' : 'rgba(231,76,60,0.3)'}` }}>
             <div style={{ fontSize: 48 }}>{over === '시민' ? '🎉' : '💀'}</div>
             <div style={{ fontSize: 24, fontWeight: 900, marginTop: 8 }}>{over === '시민' ? '시민 승리!' : '마피아 승리!'}</div>
+             {myCoinResult && (
+               <div style={{ marginTop: 10, display: 'inline-flex', alignItems: 'center', gap: 6, background: 'rgba(255,215,0,0.15)', padding: '6px 14px', borderRadius: 20, fontSize: 14, fontWeight: 700, color: '#ffd700' }}>
+                 🪙 +{myCoinResult.earned} MF코인 획득!
+               </div>
+             )}
           </DCard>
           <Header dark>결과</Header>
           {players.map(p => (
