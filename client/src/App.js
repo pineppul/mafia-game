@@ -36,6 +36,7 @@ const SKINS = [
 const RARITY_COLOR = { common: '#aaa', uncommon: '#2ecc71', rare: '#3498db', epic: '#9b59b6', legendary: '#ffd700' };
 const RARITY_LABEL = { common: 'COMMON', uncommon: 'UNCOMMON', rare: 'RARE', epic: 'EPIC', legendary: 'LEGENDARY' };
 function getSkin(id) { return SKINS.find(s => s.id === id); }
+const DECOMPOSE_VALUE_CLIENT = { common: 20, uncommon: 50, rare: 120, epic: 300, legendary: 800 };
 const RE = { '마피아': '🔪', '경찰': '🔍', '의사': '💊', '시민': '👤' };
 
 /* ── 효과음 ── */
@@ -483,11 +484,29 @@ const openBoxMulti = () => {
     );
   }
 
-/* ═══ 상점 ═══ */
+  /* ═══ 상점 ═══ */
   if (screen === 'shop') {
     return (
       <Page>
         {boxOpening && boxResult && <BoxOpenAnim result={getSkin(boxResult.id) ? { ...getSkin(boxResult.id) } : boxResult} onClose={() => { setBoxOpening(false); setBoxResult(null); }} />}
+        {multiOpening && multiResults && (
+          <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.95)', zIndex: 300, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: 20, overflowY: 'auto' }}>
+            <div style={{ fontSize: 22, fontWeight: 900, color: '#fff', marginBottom: 16 }}>🎉 10연속 뽑기 결과!</div>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: 10, maxWidth: 500, marginBottom: 20 }}>
+              {multiResults.map((s, i) => {
+                const c = RARITY_COLOR[s.rarity];
+                return (
+                  <div key={i} style={{ textAlign: 'center', padding: 8, borderRadius: 12, background: `${c}22`, border: `2px solid ${c}`, boxShadow: s.rarity === 'legendary' ? `0 0 20px ${c}` : s.rarity === 'epic' ? `0 0 12px ${c}` : 'none', animation: `resultPop 0.5s ease ${i * 0.08}s both` }}>
+                    <div style={{ width: 40, height: 40, borderRadius: '50%', margin: '0 auto 4px', background: c.includes('gradient') ? c : `radial-gradient(circle, ${c}44, transparent)`, border: `2px solid ${c}`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 20 }}>🎭</div>
+                    <div style={{ fontSize: 9, fontWeight: 900, color: c }}>{RARITY_LABEL[s.rarity]}</div>
+                  </div>
+                );
+              })}
+            </div>
+            <Btn bg="linear-gradient(135deg,#667eea,#764ba2)" shadow="rgba(102,126,234,0.4)" onClick={() => { setMultiOpening(false); setMultiResults(null); }} style={{ width: 200 }}>확인</Btn>
+          </div>
+        )}
+
         <h1 style={{ textAlign: 'center', fontSize: 28, fontWeight: 900, color: '#fff', margin: '20px 0 4px' }}>🎁 상점</h1>
         <p style={{ textAlign: 'center', fontSize: 13, color: 'rgba(255,255,255,0.6)', marginBottom: 16 }}>스킨 상자를 열어 프로필을 꾸며보세요!</p>
 
@@ -509,14 +528,26 @@ const openBoxMulti = () => {
             ))}
           </div>
           <Btn bg="linear-gradient(135deg,#ffd700,#ff9500)" shadow="rgba(255,215,0,0.4)" onClick={openBox}>
-            🪙 200 코인으로 열기
+            🪙 200 코인으로 1회 열기
+          </Btn>
+          <Btn bg="linear-gradient(135deg,#e74c3c,#9b59b6)" shadow="rgba(155,89,182,0.4)" onClick={openBoxMulti} style={{ marginBottom: 0 }}>
+            🎉 1800 코인으로 10연속 열기 <span style={{ fontSize: 11, opacity: 0.8 }}>(200 할인)</span>
           </Btn>
         </Card>
 
         {err && <Card style={{ background: 'rgba(231,76,60,0.1)', border: '1px solid rgba(231,76,60,0.3)' }}><p style={{ color: '#e74c3c', textAlign: 'center', fontWeight: 600, margin: 0 }}>{err}</p></Card>}
 
-        <div style={{ fontSize: 13, fontWeight: 700, color: '#fff', marginBottom: 10, marginTop: 8 }}>🎒 보유 스킨 ({inventory.length})</div>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 8, marginBottom: 10 }}>
+          <div style={{ fontSize: 13, fontWeight: 700, color: '#fff' }}>🎒 보유 스킨 ({inventory.length})</div>
+          <button onClick={() => setDecomposeMode(!decomposeMode)} style={{ fontSize: 12, fontWeight: 700, padding: '6px 12px', borderRadius: 8, border: 'none', cursor: 'pointer', background: decomposeMode ? '#e74c3c' : 'rgba(255,255,255,0.15)', color: '#fff' }}>
+            {decomposeMode ? '✓ 분해 모드 켜짐' : '🔨 분해 모드'}
+          </button>
+        </div>
+
         <Card>
+          {decomposeMode && (
+            <p style={{ fontSize: 12, color: '#e74c3c', textAlign: 'center', marginBottom: 12, fontWeight: 600 }}>⚠️ 스킨을 탭하면 분해되어 코인으로 전환됩니다! (Common 20 / Uncommon 50 / Rare 120 / Epic 300 / Legendary 800)</p>
+          )}
           {inventory.length === 0 ? (
             <p style={{ textAlign: 'center', color: '#999', padding: 20 }}>아직 보유한 스킨이 없어요!</p>
           ) : (
@@ -527,19 +558,20 @@ const openBoxMulti = () => {
                 const isEquipped = equipped === skinId;
                 const count = inventory.filter(s => s === skinId).length;
                 return (
-                  <div key={skinId} onClick={() => equipSkin(skinId)} style={{ textAlign: 'center', cursor: 'pointer', padding: 8, borderRadius: 12, background: isEquipped ? `${RARITY_COLOR[skin.rarity]}22` : '#f8f8f8', border: isEquipped ? `2px solid ${RARITY_COLOR[skin.rarity]}` : '2px solid transparent' }}>
+                  <div key={skinId} onClick={() => decomposeMode ? decomposeSkin(skinId) : equipSkin(skinId)} style={{ textAlign: 'center', cursor: 'pointer', padding: 8, borderRadius: 12, background: decomposeMode ? 'rgba(231,76,60,0.08)' : isEquipped ? `${RARITY_COLOR[skin.rarity]}22` : '#f8f8f8', border: decomposeMode ? '2px dashed rgba(231,76,60,0.3)' : isEquipped ? `2px solid ${RARITY_COLOR[skin.rarity]}` : '2px solid transparent' }}>
                     <div style={{ position: 'relative', display: 'inline-block' }}>
                       <Avatar emoji="🎭" color="#667eea" size={48} skinId={skinId} />
                       {count > 1 && <span style={{ position: 'absolute', bottom: -4, right: -4, background: '#333', color: '#fff', fontSize: 10, fontWeight: 700, borderRadius: 8, padding: '1px 5px' }}>x{count}</span>}
                     </div>
                     <div style={{ fontSize: 10, fontWeight: 700, color: RARITY_COLOR[skin.rarity], marginTop: 4 }}>{skin.name}</div>
-                    {isEquipped && <div style={{ fontSize: 9, color: RARITY_COLOR[skin.rarity], fontWeight: 900 }}>장착중</div>}
+                    {isEquipped && !decomposeMode && <div style={{ fontSize: 9, color: RARITY_COLOR[skin.rarity], fontWeight: 900 }}>장착중</div>}
+                    {decomposeMode && <div style={{ fontSize: 9, color: '#e74c3c', fontWeight: 900 }}>🪙+{DECOMPOSE_VALUE_CLIENT[skin.rarity]}</div>}
                   </div>
                 );
               })}
             </div>
           )}
-          {equipped && (
+          {equipped && !decomposeMode && (
             <Btn bg="#e0e0e0" shadow="rgba(0,0,0,0.05)" onClick={() => equipSkin(null)} style={{ marginTop: 12, marginBottom: 0 }}>
               <span style={{ color: '#888' }}>테두리 해제</span>
             </Btn>
