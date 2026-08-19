@@ -698,7 +698,7 @@ const openBoxMulti = () => {
         <MuteB />
         {ctx && <CtxMenu {...ctx} isHost={isHost} onKick={() => kick(ctx.player.id)} onInfo={() => getInfo(ctx.player.id)} onClose={() => setCtx(null)} />}
         {pInfo && <InfoModal info={pInfo} onClose={() => setPInfo(null)} />}
-        <div style={{ maxWidth: 700, margin: '0 auto', padding: 20 }}>
+        <div className="mafia-page-container" style={{ maxWidth: 700, margin: '0 auto', padding: 20, boxSizing: 'border-box' }}>
           <h1 style={{ textAlign: 'center', fontSize: 24, fontWeight: 900, marginBottom: 12 }}>대기실</h1>
           <DCard style={{ textAlign: 'center' }}>
             <div style={{ fontSize: 12, color: '#888', marginBottom: 4 }}>방 코드</div>
@@ -751,7 +751,7 @@ const openBoxMulti = () => {
         {olay && <Overlay event={olay} onDone={hideOlay} />}
         {ctx && <CtxMenu {...ctx} isHost={isHost} onKick={() => kick(ctx.player.id)} onInfo={() => getInfo(ctx.player.id)} onClose={() => setCtx(null)} />}
         {pInfo && <InfoModal info={pInfo} onClose={() => setPInfo(null)} />}
-        <div style={{ flex: 1, overflowY: 'auto', maxWidth: 900, margin: '0 auto', width: '100%', padding: 16 }}>
+        <div className="mafia-page-container" style={{ flex: 1, overflowY: 'auto', maxWidth: 900, margin: '0 auto', width: '100%', padding: 16, boxSizing: 'border-box' }}>
           <div style={{ textAlign: 'center', padding: 14, background: 'rgba(255,255,255,0.03)', borderRadius: 16, border: '1px solid rgba(255,255,255,0.08)', marginBottom: 12 }}>
             <div style={{ fontSize: 12, color: '#888', letterSpacing: 1, marginBottom: 4 }}>{phase === 'day' ? '☀️ 낮' : phase === 'vote' ? '🗳️ 투표' : '🌙 밤'}</div>
             <div style={{ fontSize: 40, fontWeight: 900, color: tLeft <= 10 ? '#e74c3c' : tLeft <= 30 ? '#f39c12' : '#2ecc71' }}>{tLeft}초</div>
@@ -814,7 +814,7 @@ const openBoxMulti = () => {
             </div>
           </>}
         </div>
-        <div style={{ maxWidth: 900, margin: '0 auto', width: '100%' }}>
+        <div className="mafia-page-container" style={{ maxWidth: 900, margin: '0 auto', width: '100%', boxSizing: 'border-box' }}>
           <ChatBox msgs={msgs} input={chatIn} setInput={setChatIn} onSend={sendChat} phase={phase} role={myRole} />
         </div>
       </div>
@@ -826,7 +826,7 @@ const openBoxMulti = () => {
     return (
       <div style={{ minHeight: '100vh', background: bg2, fontFamily: "'Segoe UI',sans-serif", color: '#fff', display: 'flex', flexDirection: 'column' }}>
         <MuteB />
-        <div style={{ flex: 1, overflowY: 'auto', maxWidth: 460, margin: '0 auto', width: '100%', padding: 20 }}>
+        <div className="mafia-page-container" style={{ flex: 1, overflowY: 'auto', maxWidth: 460, margin: '0 auto', width: '100%', padding: 20, boxSizing: 'border-box' }}>
           <DCard style={{ textAlign: 'center', background: over === '시민' ? 'rgba(46,204,113,0.12)' : 'rgba(231,76,60,0.12)', border: `1px solid ${over === '시민' ? 'rgba(46,204,113,0.3)' : 'rgba(231,76,60,0.3)'}` }}>
             <div style={{ fontSize: 48 }}>{over === '시민' ? '🎉' : '💀'}</div>
             <div style={{ fontSize: 24, fontWeight: 900, marginTop: 8 }}>{over === '시민' ? '시민 승리!' : '마피아 승리!'}</div>
@@ -855,7 +855,7 @@ const openBoxMulti = () => {
           ))}
           <Btn bg="linear-gradient(135deg,#667eea,#764ba2)" shadow="rgba(102,126,234,0.3)" onClick={() => window.location.reload()} style={{ marginTop: 12 }}>처음으로</Btn>
         </div>
-        <div style={{ maxWidth: 460, margin: '0 auto', width: '100%' }}>
+        <div className="mafia-page-container" style={{ maxWidth: 460, margin: '0 auto', width: '100%', boxSizing: 'border-box' }}>
           <ChatBox msgs={msgs} input={chatIn} setInput={setChatIn} onSend={sendChat} phase={phase} role={myRole} />
         </div>
       </div>
