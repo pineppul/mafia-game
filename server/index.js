@@ -488,6 +488,50 @@ io.on('connection', (socket) => {
     socket.emit('boxResult', { skin: wonSkin, newCoins });
   });
 
+    const DECOMPOSE_VALUE = { common: 20, uncommon: 50, rare: 120, epic: 300, legendary: 800 };
+
+  socket.on('decomposeSkin', async ({ uid, skinId }) => {
+    const inv = await getInventory(uid);
+    const idx = inv.indexOf(skinId);
+    if (idx === -1) { socket.emit('error', '보유하지 않은 스킨입니다.'); return; }
+
+    const skin = SKINS.find(s => s.id === skinId);
+    if (!skin) return;
+
+    inv.splice(idx, 1);
+    await saveInventory(uid, inv);
+
+    const equippedNow = await getEquippedSkin(uid);
+    if (equippedNow === skinId && !inv.includes(skinId)) {
+      await saveEquippedSkin(uid, null);
+      socket.emit('equipped', { skinId: null });
+    }
+
+    const reward = DECOMPOSE_VALUE[skin.rarity];
+    const currentCoins = await getCoins(uid);
+    const newCoins = currentCoins + reward;
+    await saveCoins(uid, newCoins);
+
+    socket.emit('decomposeResult', { skinId, reward, newCoins, inventory: inv });
+  });
+
+  socket.on('openBoxMulti', async ({ uid }) => {
+    const MULTI_COST = 1800;
+    const currentCoins = await getCoins(uid);
+    if (currentCoins < MULTI_COST) { socket.emit('error', '코인이 부족합니다! (1800 필요)'); return; }
+
+    let newCoins = currentCoins - MULTI_COST;
+    await saveCoins(uid, newCoins);
+
+    const wonSkins = [];
+    for (let i = 0; i < 10; i++) wonSkins.push(rollSkin());
+
+    const inv = await getInventory(uid);
+    wonSkins.forEach(s => inv.push(s.id));
+    await saveInventory(uid, inv);
+
+    socket.emit('boxMultiResult', { skins: wonSkins, newCoins });
+  });
   socket.on('equipSkin', async ({ uid, skinId }) => {
     await saveEquippedSkin(uid, skinId);
     socket.emit('equipped', { skinId });
