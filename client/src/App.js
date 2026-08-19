@@ -182,70 +182,90 @@ function CtxMenu({ x, y, player, isHost, onKick, onInfo, onClose }) {
 
 /* ── 상자 뽑기 애니메이션 ── */
 function BoxOpenAnim({ result, onClose }) {
-  const [stage, setStage] = useState(0); // 0: 흔들림, 1: 폭발, 2: 결과 표시
+  const [stage, setStage] = useState(0);
 
   useEffect(() => {
     if (!result) return;
-    const t1 = setTimeout(() => setStage(1), 1800);
-    const t2 = setTimeout(() => setStage(2), 2500);
+    const rarity = result.rarity || 'common';
+    const isLegendary = rarity === 'legendary';
+    const shakeDuration = isLegendary ? 2800 : rarity === 'epic' ? 2300 : 1800;
+    const t1 = setTimeout(() => setStage(1), shakeDuration);
+    const t2 = setTimeout(() => setStage(2), shakeDuration + (isLegendary ? 900 : 700));
     return () => { clearTimeout(t1); clearTimeout(t2); };
   }, [result]);
 
   const rarity = result?.rarity || 'common';
   const rColor = RARITY_COLOR[rarity];
-  const isHighRarity = rarity === 'epic' || rarity === 'legendary';
+  const isEpicPlus = rarity === 'epic' || rarity === 'legendary';
   const isLegendary = rarity === 'legendary';
 
   return (
     <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.92)', zIndex: 300, display: 'flex', alignItems: 'center', justifyContent: 'center', flexDirection: 'column', overflow: 'hidden' }}>
-      {/* 배경 파티클 (고등급일수록 화려하게) */}
-      {stage >= 1 && isHighRarity && Array.from({ length: isLegendary ? 40 : 20 }).map((_, i) => (
+      {stage >= 1 && isEpicPlus && Array.from({ length: isLegendary ? 60 : 25 }).map((_, i) => (
         <div key={i} style={{
-          position: 'absolute', left: '50%', top: '50%', width: 4, height: 4, borderRadius: '50%',
-          background: rColor, boxShadow: `0 0 8px ${rColor}`,
-          animation: `boxParticle${i % 4} ${0.8 + Math.random() * 0.6}s ease-out forwards`,
-          animationDelay: `${Math.random() * 0.2}s`
+          position: 'absolute', left: '50%', top: '50%', width: isLegendary ? 6 : 4, height: isLegendary ? 6 : 4, borderRadius: '50%',
+          background: rColor, boxShadow: `0 0 10px ${rColor}`,
+          animation: `boxParticle${i % 4} ${0.9 + Math.random() * 0.7}s ease-out forwards`,
+          animationDelay: `${Math.random() * 0.25}s`
+        }} />
+      ))}
+
+      {stage >= 1 && isLegendary && Array.from({ length: 8 }).map((_, i) => (
+        <div key={`ray${i}`} style={{
+          position: 'absolute', left: '50%', top: '50%', width: 3, height: 400,
+          background: `linear-gradient(180deg, transparent, ${rColor}, transparent)`,
+          transform: `translate(-50%,-50%) rotate(${i * 45}deg)`,
+          animation: 'legendaryRay 1.8s ease-out forwards'
         }} />
       ))}
 
       <style>{`
         @keyframes boxShake { 0%,100% { transform: translateX(0) rotate(0deg); } 10% { transform: translateX(-8px) rotate(-3deg); } 20% { transform: translateX(8px) rotate(3deg); } 30% { transform: translateX(-8px) rotate(-3deg); } 40% { transform: translateX(8px) rotate(3deg); } 50% { transform: translateX(-6px) rotate(-2deg); } 60% { transform: translateX(6px) rotate(2deg); } 70% { transform: translateX(-4px) rotate(-1deg); } 80% { transform: translateX(4px) rotate(1deg); } 90% { transform: translateX(-2px); } }
+        @keyframes boxShakeIntense { 0%,100% { transform: translateX(0) rotate(0deg) scale(1); } 10% { transform: translateX(-14px) rotate(-6deg) scale(1.05); } 20% { transform: translateX(14px) rotate(6deg) scale(1.05); } 30% { transform: translateX(-14px) rotate(-6deg) scale(1.08); } 40% { transform: translateX(14px) rotate(6deg) scale(1.08); } 50% { transform: translateX(-10px) rotate(-4deg) scale(1.1); } 60% { transform: translateX(10px) rotate(4deg) scale(1.1); } 70% { transform: translateX(-6px) rotate(-2deg) scale(1.05); } 80% { transform: translateX(6px) rotate(2deg) scale(1.05); } 90% { transform: translateX(-3px) scale(1.02); } }
         @keyframes boxPulse { 0%,100% { box-shadow: 0 0 20px rgba(255,255,255,0.3); } 50% { box-shadow: 0 0 50px rgba(255,255,255,0.6); } }
+        @keyframes boxPulseIntense { 0%,100% { box-shadow: 0 0 40px currentColor; } 50% { box-shadow: 0 0 100px currentColor, 0 0 150px currentColor; } }
         @keyframes boxExplode { 0% { transform: scale(1); opacity: 1; } 100% { transform: scale(3); opacity: 0; } }
+        @keyframes boxExplodeIntense { 0% { transform: scale(1); opacity: 1; } 100% { transform: scale(5); opacity: 0; } }
         @keyframes resultPop { 0% { transform: scale(0) rotate(-180deg); opacity: 0; } 60% { transform: scale(1.2) rotate(10deg); opacity: 1; } 100% { transform: scale(1) rotate(0deg); opacity: 1; } }
         @keyframes ringGlow { 0%,100% { opacity: 0.5; transform: scale(1); } 50% { opacity: 1; transform: scale(1.15); } }
+        @keyframes ringGlowIntense { 0%,100% { opacity: 0.6; transform: scale(1) rotate(0deg); } 50% { opacity: 1; transform: scale(1.25) rotate(180deg); } }
         @keyframes rarityBeam { 0% { opacity: 0; transform: scaleY(0); } 30% { opacity: 1; transform: scaleY(1); } 100% { opacity: 0; transform: scaleY(1); } }
-        @keyframes boxParticle0 { to { transform: translate(-150px,-150px) scale(0); opacity: 0; } }
-        @keyframes boxParticle1 { to { transform: translate(150px,-150px) scale(0); opacity: 0; } }
-        @keyframes boxParticle2 { to { transform: translate(-150px,150px) scale(0); opacity: 0; } }
-        @keyframes boxParticle3 { to { transform: translate(150px,150px) scale(0); opacity: 0; } }
+        @keyframes legendaryRay { 0% { opacity: 0; transform: translate(-50%,-50%) scaleY(0) rotate(var(--r,0deg)); } 40% { opacity: 1; transform: translate(-50%,-50%) scaleY(1) rotate(var(--r,0deg)); } 100% { opacity: 0; transform: translate(-50%,-50%) scaleY(1.3) rotate(var(--r,0deg)); } }
+        @keyframes boxParticle0 { to { transform: translate(-180px,-180px) scale(0); opacity: 0; } }
+        @keyframes boxParticle1 { to { transform: translate(180px,-180px) scale(0); opacity: 0; } }
+        @keyframes boxParticle2 { to { transform: translate(-180px,180px) scale(0); opacity: 0; } }
+        @keyframes boxParticle3 { to { transform: translate(180px,180px) scale(0); opacity: 0; } }
+        @keyframes shimmerText { 0% { background-position: -200% center; } 100% { background-position: 200% center; } }
       `}</style>
 
       {stage < 2 && (
         <div style={{ position: 'relative' }}>
-          {stage === 1 && isHighRarity && (
-            <div style={{ position: 'absolute', inset: -60, borderRadius: '50%', background: `radial-gradient(circle, ${rColor}88 0%, transparent 70%)`, animation: 'boxExplode 0.7s ease-out forwards' }} />
+          {stage === 1 && isEpicPlus && (
+            <div style={{ position: 'absolute', inset: -80, borderRadius: '50%', background: `radial-gradient(circle, ${rColor}aa 0%, transparent 70%)`, animation: isLegendary ? 'boxExplodeIntense 0.8s ease-out forwards' : 'boxExplode 0.7s ease-out forwards' }} />
           )}
           <div style={{
-            fontSize: 100, animation: stage === 0 ? 'boxShake 0.4s infinite, boxPulse 1s infinite' : 'boxExplode 0.5s ease-out forwards',
-            filter: `drop-shadow(0 0 20px ${rColor})`
+            fontSize: isEpicPlus ? 120 : 100,
+            animation: stage === 0 ? (isEpicPlus ? 'boxShakeIntense 0.35s infinite, boxPulseIntense 0.8s infinite' : 'boxShake 0.4s infinite, boxPulse 1s infinite') : (isLegendary ? 'boxExplodeIntense 0.6s ease-out forwards' : 'boxExplode 0.5s ease-out forwards'),
+            filter: `drop-shadow(0 0 ${isEpicPlus ? 35 : 20}px ${rColor})`,
+            color: rColor
           }}>📦</div>
         </div>
       )}
 
       {stage === 2 && result && (
         <div style={{ textAlign: 'center', animation: 'resultPop 0.6s cubic-bezier(0.34,1.56,0.64,1)' }}>
-          {isHighRarity && (
-            <div style={{ position: 'absolute', top: '50%', left: '50%', width: 4, height: 300, background: `linear-gradient(180deg, transparent, ${rColor}, transparent)`, transform: 'translate(-50%,-50%)', animation: 'rarityBeam 1.5s ease-in-out infinite' }} />
+          {isEpicPlus && (
+            <div style={{ position: 'absolute', top: '50%', left: '50%', width: isLegendary ? 6 : 4, height: isLegendary ? 400 : 300, background: `linear-gradient(180deg, transparent, ${rColor}, transparent)`, transform: 'translate(-50%,-50%)', animation: 'rarityBeam 1.5s ease-in-out infinite' }} />
           )}
-          <div style={{ position: 'relative', width: 140, height: 140, margin: '0 auto 20px' }}>
-            <div style={{ position: 'absolute', inset: -20, borderRadius: '50%', border: `3px solid ${rColor}`, animation: 'ringGlow 1.5s ease-in-out infinite' }} />
-            <div style={{ width: 140, height: 140, borderRadius: '50%', background: rColor.includes('gradient') ? rColor : `radial-gradient(circle, ${rColor}44, transparent)`, border: `4px solid ${rColor}`, boxShadow: `0 0 40px ${rColor}, 0 0 80px ${rColor}66`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 60 }}>
+          <div style={{ position: 'relative', width: isLegendary ? 170 : 140, height: isLegendary ? 170 : 140, margin: '0 auto 20px' }}>
+            <div style={{ position: 'absolute', inset: -20, borderRadius: '50%', border: `3px solid ${rColor}`, animation: isEpicPlus ? 'ringGlowIntense 1.8s ease-in-out infinite' : 'ringGlow 1.5s ease-in-out infinite' }} />
+            {isLegendary && <div style={{ position: 'absolute', inset: -35, borderRadius: '50%', border: `2px dashed ${rColor}88`, animation: 'ringGlowIntense 2.5s linear infinite reverse' }} />}
+            <div style={{ width: isLegendary ? 170 : 140, height: isLegendary ? 170 : 140, borderRadius: '50%', background: rColor.includes('gradient') ? rColor : `radial-gradient(circle, ${rColor}44, transparent)`, border: `4px solid ${rColor}`, boxShadow: `0 0 ${isEpicPlus ? 60 : 40}px ${rColor}, 0 0 ${isEpicPlus ? 120 : 80}px ${rColor}66`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: isLegendary ? 70 : 60 }}>
               🎭
             </div>
           </div>
-          <div style={{ fontSize: 14, fontWeight: 900, letterSpacing: 3, color: rColor, marginBottom: 6, textShadow: `0 0 10px ${rColor}` }}>{RARITY_LABEL[rarity]}</div>
-          <div style={{ fontSize: 26, fontWeight: 900, color: '#fff', marginBottom: 24 }}>{result.name}</div>
+          <div style={{ fontSize: isEpicPlus ? 16 : 14, fontWeight: 900, letterSpacing: 3, color: rColor, marginBottom: 6, textShadow: `0 0 ${isEpicPlus ? 15 : 10}px ${rColor}` }}>{RARITY_LABEL[rarity]}</div>
+          <div style={{ fontSize: isLegendary ? 30 : 26, fontWeight: 900, color: '#fff', marginBottom: 24 }}>{result.name}</div>
           <Btn bg={`linear-gradient(135deg, ${rColor}, ${rColor}cc)`} shadow={`${rColor}66`} onClick={onClose} style={{ width: 200 }}>확인</Btn>
         </div>
       )}
