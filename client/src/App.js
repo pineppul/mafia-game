@@ -293,6 +293,9 @@ function App() {
   const [equipped, setEquipped] = useState(null);
   const [boxOpening, setBoxOpening] = useState(false);
   const [boxResult, setBoxResult] = useState(null);
+  const [multiResults, setMultiResults] = useState(null);
+  const [multiOpening, setMultiOpening] = useState(false);
+  const [decomposeMode, setDecomposeMode] = useState(false);
   const [, setRevealStage] = useState(0);
   const [emoji, setEmoji] = useState('🎭');
   const [color, setColor] = useState('#667eea');
@@ -338,6 +341,8 @@ function App() {
       setBoxOpening(true);
     });
     socket.on('equipped', d => setEquipped(d.skinId));
+    socket.on('decomposeResult', d => { setCoins(d.newCoins); setInventory(d.inventory); });
+    socket.on('boxMultiResult', d => { setCoins(d.newCoins); setInventory(prev => [...prev, ...d.skins.map(s => s.id)]); setMultiResults(d.skins); setMultiOpening(true); });
     socket.on('roomUpdate', r => { setPlayers(r.players); setIsHost(r.host === socket.id); setRSet(r.settings); setScreen(s => ['main','createRoom','joinRoom','quickWait'].includes(s) ? 'room' : s); });
     socket.on('gameState', d => { setPhase(d.phase); setPlayers(d.players); setMyRole(d.myRole); setMyVote(''); setRoleHidden(true); setScreen('game'); if (d.settings) setTTotal(d.phase === 'day' ? d.settings.dayTime : d.phase === 'vote' ? d.settings.voteTime : d.settings.nightTime); });
     socket.on('timerUpdate', d => { setTLeft(d.timeLeft); setPhase(d.phase); });
@@ -368,6 +373,15 @@ function App() {
 
 const equipSkin = (skinId) => {
   socket.emit('equipSkin', { uid: user.uid, skinId });
+};
+const decomposeSkin = (skinId) => {
+  socket.emit('decomposeSkin', { uid: user.uid, skinId });
+};
+
+const openBoxMulti = () => {
+  if (coins < 1800) { setErr('코인이 부족합니다! (1800 필요)'); return; }
+  setMultiResults(null);
+  socket.emit('openBoxMulti', { uid: user.uid });
 };
   const saveProf = () => { if (!nick.trim()) { setErr('닉네임 입력!'); return; } socket.emit('saveProfile', { uid: user.uid, nickname: nick, emoji, color }); setScreen('main'); setErr(''); };
   const createRoom = () => { if (!nick || !code) { setErr('닉네임과 방 코드 입력!'); return; } setErr(''); socket.emit('createRoom', { roomCode: code, nickname: nick, emoji, color, uid: user?.uid, settings: sets }); };
