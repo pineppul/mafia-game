@@ -60,11 +60,10 @@ const bg2 = 'linear-gradient(135deg, #0c0c1d 0%, #1a1a3e 50%, #0c0c1d 100%)';
 function Page({ children, light = true, center = true }) {
   return (
     <div style={{ minHeight: '100vh', background: light ? bg1 : bg2, fontFamily: "'Segoe UI',sans-serif", color: light ? '#333' : '#fff', display: 'flex', flexDirection: 'column', alignItems: center ? 'center' : 'stretch', justifyContent: center ? 'center' : 'flex-start', padding: '20px 0' }}>
-      <div style={{ maxWidth: 460, width: '100%', padding: '0 20px' }}>{children}</div>
+      <div className="mafia-page-container" style={{ maxWidth: 460, width: '100%', padding: '0 20px', margin: '0 auto', boxSizing: 'border-box' }}>{children}</div>
     </div>
   );
 }
-
 function Card({ children, style, onClick }) {
   return <div onClick={onClick} style={{ background: 'rgba(255,255,255,0.95)', borderRadius: 20, padding: 24, marginBottom: 14, boxShadow: '0 8px 32px rgba(0,0,0,0.12)', ...style }}>{children}</div>;
 }
@@ -866,4 +865,23 @@ const openBoxMulti = () => {
   return <Page><Card><p style={{ textAlign: 'center' }}>로딩 중...</p></Card></Page>;
 }
 
+if (typeof document !== 'undefined' && !document.getElementById('mafia-responsive-style')) {
+  const styleTag = document.createElement('style');
+  styleTag.id = 'mafia-responsive-style';
+  styleTag.innerHTML = `
+    * { -webkit-tap-highlight-color: transparent; }
+    body { margin: 0; }
+    @media (min-width: 700px) and (max-width: 1100px) {
+      .mafia-page-container { max-width: 640px !important; }
+    }
+    @media (min-width: 1100px) {
+      .mafia-page-container { max-width: 500px !important; }
+    }
+    @media (max-width: 480px) {
+      .mafia-page-container { padding-left: 12px !important; padding-right: 12px !important; }
+    }
+    input, textarea { font-size: 16px !important; }
+  `;
+  document.head.appendChild(styleTag);
+}
 export default App;
