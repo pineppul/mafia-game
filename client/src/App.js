@@ -357,12 +357,12 @@ function App() {
     socket.on('boxResult', d => { 
       setCoins(d.newCoins); 
       setBoxResult(d.skin);
-      setInventory(prev => [...prev, d.skin.id]);
       setBoxOpening(true);
+      if (user) socket.emit('getInventory', { uid: user.uid });
     });
     socket.on('equipped', d => setEquipped(d.skinId));
     socket.on('decomposeResult', d => { setCoins(d.newCoins); setInventory(d.inventory); });
-    socket.on('boxMultiResult', d => { setCoins(d.newCoins); setInventory(prev => [...prev, ...d.skins.map(s => s.id)]); setMultiResults(d.skins); setMultiOpening(true); });
+    socket.on('boxMultiResult', d => { setCoins(d.newCoins); setMultiResults(d.skins); setMultiOpening(true); if (user) socket.emit('getInventory', { uid: user.uid }); });
     socket.on('roomUpdate', r => { setPlayers(r.players); setIsHost(r.host === socket.id); setRSet(r.settings); setScreen(s => ['main','createRoom','joinRoom','quickWait'].includes(s) ? 'room' : s); });
     socket.on('gameState', d => { setPhase(d.phase); setPlayers(d.players); setMyRole(d.myRole); setMyVote(''); setRoleHidden(true); setScreen('game'); if (d.settings) setTTotal(d.phase === 'day' ? d.settings.dayTime : d.phase === 'vote' ? d.settings.voteTime : d.settings.nightTime); });
     socket.on('timerUpdate', d => { setTLeft(d.timeLeft); setPhase(d.phase); });
