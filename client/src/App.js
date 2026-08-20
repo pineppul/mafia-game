@@ -106,14 +106,31 @@ function Header({ children, dark }) {
   return <div style={{ fontSize: 12, fontWeight: 700, color: dark ? '#555' : '#aaa', letterSpacing: 1.5, textTransform: 'uppercase', marginBottom: 10, paddingBottom: 6, borderBottom: `1px solid ${dark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.06)'}` }}>{children}</div>;
 }
 
-function SettingRow({ label, value, options, onChange }) {
+function NumberInput({ label, value, onChange, min, max, unit }) {
   return (
     <div style={{ marginBottom: 12 }}>
-      <Label>{label}</Label>
-      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
-        {options.map(o => (
-          <button key={o} onClick={() => onChange(o)} style={{ padding: '7px 14px', borderRadius: 10, fontWeight: 700, fontSize: 13, cursor: 'pointer', border: `2px solid ${value === o ? '#667eea' : '#e8e8e8'}`, background: value === o ? 'rgba(102,126,234,0.1)' : '#f8f8f8', color: value === o ? '#667eea' : '#999' }}>{o}</button>
-        ))}
+      <Label>{label} <span style={{ color: '#ccc', fontWeight: 500, textTransform: 'none' }}>({min}~{max}{unit || ''})</span></Label>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+        <button type="button" onClick={() => onChange(Math.max(min, (parseInt(value, 10) || min) - 1))} style={{ width: 36, height: 36, borderRadius: 10, border: '2px solid #e8e8e8', background: '#f8f8f8', color: '#667eea', fontWeight: 900, fontSize: 16, cursor: 'pointer', flexShrink: 0 }}>−</button>
+        <input
+          type="number"
+          value={value}
+          onChange={e => {
+            const raw = e.target.value;
+            if (raw === '') { onChange(''); return; }
+            const v = parseInt(raw, 10);
+            if (!isNaN(v)) onChange(v);
+          }}
+          onBlur={e => {
+            let v = parseInt(e.target.value, 10);
+            if (isNaN(v)) v = min;
+            if (v < min) v = min;
+            if (v > max) v = max;
+            onChange(v);
+          }}
+          style={{ flex: 1, textAlign: 'center', padding: '9px 8px', borderRadius: 10, border: '2px solid #e8e8e8', fontSize: 15, fontWeight: 700, outline: 'none', background: '#fafafa' }}
+        />
+        <button type="button" onClick={() => onChange(Math.min(max, (parseInt(value, 10) || min) + 1))} style={{ width: 36, height: 36, borderRadius: 10, border: '2px solid #e8e8e8', background: '#f8f8f8', color: '#667eea', fontWeight: 900, fontSize: 16, cursor: 'pointer', flexShrink: 0 }}>+</button>
       </div>
     </div>
   );
@@ -330,6 +347,7 @@ function App() {
   const [voteD, setVoteD] = useState({});
   const [myVote, setMyVote] = useState('');
   const [police, setPolice] = useState('');
+  const [missionInfo, setMissionInfo] = useState(null);
   const [over, setOver] = useState(null);
   const [myCoinResult, setMyCoinResult] = useState(null);
   const [ranks, setRanks] = useState([]);
@@ -364,11 +382,14 @@ function App() {
     socket.on('decomposeResult', d => { setCoins(d.newCoins); setInventory(d.inventory); });
     socket.on('boxMultiResult', d => { setCoins(d.newCoins); setMultiResults(d.skins); setMultiOpening(true); if (user) socket.emit('getInventory', { uid: user.uid }); });
     socket.on('roomUpdate', r => { setPlayers(r.players); setIsHost(r.host === socket.id); setRSet(r.settings); setScreen(s => ['main','createRoom','joinRoom','quickWait'].includes(s) ? 'room' : s); });
-    socket.on('gameState', d => { setPhase(d.phase); setPlayers(d.players); setMyRole(d.myRole); setMyVote(''); setRoleHidden(true); setScreen('game'); if (d.settings) setTTotal(d.phase === 'day' ? d.settings.dayTime : d.phase === 'vote' ? d.settings.voteTime : d.settings.nightTime); });
+    socket.on('gameState', d => { setPhase(d.phase); setPlayers(d.players); setMyRole(d.myRole); setMyVote(''); setRoleHidden(true); setMissionInfo(null); setScreen('game'); if (d.settings) setTTotal(d.phase === 'day' ? d.settings.dayTime : d.phase === 'vote' ? d.settings.voteTime : d.settings.nightTime); });
+    socket.on('missionAssigned', d => setMissionInfo(d));
+    socket.on('missionProgress', d => setMissionInfo(prev => prev ? { ...prev, progress: d.progress } : prev));
+    socket.on('missionResult', d => setMissionInfo(prev => prev ? { ...prev, done: d.success } : prev));
     socket.on('timerUpdate', d => { setTLeft(d.timeLeft); setPhase(d.phase); });
     socket.on('voteUpdate', d => { setVotes(d.votes); if (d.voteDetails) setVoteD(d.voteDetails); });
     socket.on('phaseChange', d => { setPhase(d.phase); setMyVote(''); setVotes({}); setVoteD({}); setPolice(''); setOlay(d); if (!mute) { if (d.event === 'nightKill' || d.event === 'eliminated') snd('death'); else if (d.event === 'healed') snd('heal'); else if (d.phase === 'night') snd('night'); else snd('day'); } });
-    socket.on('policeResult', d => setPolice(`🔍 ${d.emoji} ${d.nickname} → [${d.role}]`));
+    socket.on('policeResult', d => setPolice(d.blocked ? '❌ 히든미션 실패로 오늘 밤 조사를 할 수 없었습니다.' : `🔍 ${d.emoji} ${d.nickname} → [${d.role}]`));
     socket.on('chatMessage', d => setMsgs(p => [...p, d]));
     socket.on('gameOver', d => { setPlayers(d.players); setOver(d.winner); setRanks(d.rankings); setScreen('gameover'); if (!mute) snd(d.winner === '시민' ? 'win' : 'lose'); if (d.coinResults && user) { const my = d.coinResults[user.uid]; if (my) { setMyCoinResult(my); setCoins(my.total); } } });
     socket.on('rankingsList', l => setLRanks(l));
@@ -378,7 +399,7 @@ function App() {
     socket.on('quickMatchFound', d => { setCode(d.roomCode); setQStat(null); });
     socket.on('quickMatchStatus', s => { setQStat(s); if (s.status === 'waiting') setScreen('quickWait'); });
     socket.on('error', m => setErr(m));
-    return () => { ['profileData','roomUpdate','gameState','timerUpdate','voteUpdate','phaseChange','policeResult','chatMessage','gameOver','rankingsList','playerInfo','kicked','quickMatchFound','quickMatchStatus','error'].forEach(e => socket.off(e)); };
+    return () => { ['profileData','roomUpdate','gameState','missionAssigned','missionProgress','missionResult','timerUpdate','voteUpdate','phaseChange','policeResult','chatMessage','gameOver','rankingsList','playerInfo','kicked','roomClosed','quickMatchFound','quickMatchStatus','error'].forEach(e => socket.off(e)); };
   }, [mute, user]);
 
   const login = async () => { try { await signInWithPopup(auth, gProvider); } catch (e) { setErr('로그인 실패: ' + e.message); } };
@@ -404,7 +425,25 @@ const openBoxMulti = () => {
   socket.emit('openBoxMulti', { uid: user.uid });
 };
   const saveProf = () => { if (!nick.trim()) { setErr('닉네임 입력!'); return; } socket.emit('saveProfile', { uid: user.uid, nickname: nick, emoji, color }); setScreen('main'); setErr(''); };
-  const createRoom = () => { if (!nick || !code) { setErr('닉네임과 방 코드 입력!'); return; } setErr(''); socket.emit('createRoom', { roomCode: code, nickname: nick, emoji, color, uid: user?.uid, settings: sets }); };
+  const createRoom = () => {
+    if (!nick || !code) { setErr('닉네임과 방 코드 입력!'); return; }
+    const clean = {
+      maxPlayers: Math.max(5, Math.min(30, parseInt(sets.maxPlayers, 10) || 10)),
+      mafiaCount: Math.max(1, Math.min(10, parseInt(sets.mafiaCount, 10) || 1)),
+      policeCount: Math.max(0, Math.min(5, parseInt(sets.policeCount, 10) || 0)),
+      doctorCount: Math.max(0, Math.min(5, parseInt(sets.doctorCount, 10) || 0)),
+      dayTime: Math.max(10, Math.min(300, parseInt(sets.dayTime, 10) || 90)),
+      voteTime: Math.max(10, Math.min(180, parseInt(sets.voteTime, 10) || 45)),
+      nightTime: Math.max(10, Math.min(180, parseInt(sets.nightTime, 10) || 45)),
+    };
+    if (clean.mafiaCount + clean.policeCount + clean.doctorCount >= clean.maxPlayers) {
+      setErr('역할 수의 합이 최대 인원보다 적어야 해요! (시민이 최소 1명 필요)');
+      return;
+    }
+    setSets(clean);
+    setErr('');
+    socket.emit('createRoom', { roomCode: code, nickname: nick, emoji, color, uid: user?.uid, settings: clean });
+  };
   const joinRoom = () => { if (!nick || !code) { setErr('닉네임과 방 코드 입력!'); return; } setErr(''); socket.emit('joinRoom', { roomCode: code, nickname: nick, emoji, color, uid: user?.uid }); };
   const quickMatch = () => { if (!nick.trim()) { setErr('프로필 설정 필요!'); return; } socket.emit('quickMatch', { nickname: nick, emoji, color, uid: user?.uid }); };
   const cancelQ = () => { socket.emit('cancelQuickMatch'); setQStat(null); setScreen('main'); };
@@ -429,6 +468,7 @@ const openBoxMulti = () => {
     return (
       <Page>
         <div style={{ textAlign: 'center', fontSize: 72, marginBottom: 16 }}>🎭</div>
+                <div style={{ textAlign: 'center', fontSize: 72, marginBottom: 16 }}>🎭</div>
         <h1 style={{ textAlign: 'center', fontSize: 36, fontWeight: 900, color: '#fff', textShadow: '0 4px 20px rgba(0,0,0,0.3)', marginBottom: 4 }}>마피아 게임</h1>
         <p style={{ textAlign: 'center', fontSize: 14, color: 'rgba(255,255,255,0.6)', marginBottom: 28 }}>Real-time Mafia Game</p>
         <Card>
@@ -624,13 +664,13 @@ const openBoxMulti = () => {
           <div style={{ marginBottom: 14 }}><Label>방 코드</Label><Input value={code} onChange={e => setCode(e.target.value)} placeholder="예: 1234" /></div>
           <div style={{ borderTop: '1px solid #eee', paddingTop: 14, marginTop: 8 }}>
             <div style={{ fontSize: 13, fontWeight: 700, color: '#667eea', marginBottom: 12, letterSpacing: 1 }}>⚙️ 방 설정</div>
-            <SettingRow label="👥 최대 인원" value={sets.maxPlayers} options={[5,6,7,8,9,10,15,20,25,30]} onChange={v => setSets(s => ({ ...s, maxPlayers: v }))} />
-            <SettingRow label="🔪 마피아" value={sets.mafiaCount} options={[1,2,3,4,5,6,7,8,9,10]} onChange={v => setSets(s => ({ ...s, mafiaCount: v }))} />
-            <SettingRow label="🔍 경찰" value={sets.policeCount} options={[0,1,2,3,4,5]} onChange={v => setSets(s => ({ ...s, policeCount: v }))} />
-            <SettingRow label="💊 의사" value={sets.doctorCount} options={[0,1,2,3,4,5]} onChange={v => setSets(s => ({ ...s, doctorCount: v }))} />
-            <SettingRow label="☀️ 낮" value={sets.dayTime} options={[30,60,90,120,180]} onChange={v => setSets(s => ({ ...s, dayTime: v }))} />
-            <SettingRow label="🗳️ 투표" value={sets.voteTime} options={[20,30,45,60,90]} onChange={v => setSets(s => ({ ...s, voteTime: v }))} />
-            <SettingRow label="🌙 밤" value={sets.nightTime} options={[20,30,45,60,90]} onChange={v => setSets(s => ({ ...s, nightTime: v }))} />
+            <NumberInput label="👥 최대 인원" value={sets.maxPlayers} min={5} max={30} unit="명" onChange={v => setSets(s => ({ ...s, maxPlayers: v }))} />
+            <NumberInput label="🔪 마피아 수" value={sets.mafiaCount} min={1} max={10} unit="명" onChange={v => setSets(s => ({ ...s, mafiaCount: v }))} />
+            <NumberInput label="🔍 경찰 수" value={sets.policeCount} min={0} max={5} unit="명" onChange={v => setSets(s => ({ ...s, policeCount: v }))} />
+            <NumberInput label="💊 의사 수" value={sets.doctorCount} min={0} max={5} unit="명" onChange={v => setSets(s => ({ ...s, doctorCount: v }))} />
+            <NumberInput label="☀️ 낮 토론 시간" value={sets.dayTime} min={10} max={300} unit="초" onChange={v => setSets(s => ({ ...s, dayTime: v }))} />
+            <NumberInput label="🗳️ 투표 시간" value={sets.voteTime} min={10} max={180} unit="초" onChange={v => setSets(s => ({ ...s, voteTime: v }))} />
+            <NumberInput label="🌙 밤 시간" value={sets.nightTime} min={10} max={180} unit="초" onChange={v => setSets(s => ({ ...s, nightTime: v }))} />
           </div>
           {err && <p style={{ color: '#e74c3c', textAlign: 'center', fontSize: 14, marginBottom: 8 }}>{err}</p>}
           <Btn bg="linear-gradient(135deg,#e74c3c,#c0392b)" shadow="rgba(231,76,60,0.3)" onClick={createRoom}>🎮 방 만들기</Btn>
@@ -715,7 +755,7 @@ const openBoxMulti = () => {
             </div>
           )}
           <p style={{ fontSize: 11, color: '#444', marginBottom: 8 }}>💡 우클릭 → 정보/추방</p>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))', gap: 8 }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(120px, 1fr))', gap: 8 }}>
             {players.map((p, i) => (
               <DCard key={p.id} style={{ display: 'flex', alignItems: 'center', gap: 10, cursor: 'context-menu', marginBottom: 0, padding: 10 }} onContextMenu={e => ctxMenu(e, p)}>
                 <Avatar emoji={p.emoji} color={p.color} size={36} />
@@ -769,6 +809,15 @@ const openBoxMulti = () => {
               <>
                 <div style={{ fontSize: 28 }}>{RE[myRole]}</div>
                 <div style={{ fontSize: 18, fontWeight: 800, color: RC[myRole] }}>내 역할: {myRole}</div>
+                {missionInfo && (phase === 'day' || phase === 'vote') && (
+                  <div style={{ marginTop: 10, padding: '8px 12px', background: 'rgba(0,0,0,0.18)', borderRadius: 10, fontSize: 12, textAlign: 'left' }}>
+                    <div style={{ fontWeight: 800, marginBottom: 3, color: '#f39c12' }}>🎯 히든 미션</div>
+                    <div style={{ color: '#eee' }}>{missionInfo.desc}</div>
+                    <div style={{ marginTop: 4, fontWeight: 700, color: missionInfo.done ? '#2ecc71' : '#f39c12' }}>
+                      {missionInfo.done ? '✅ 성공! 오늘 밤 능력 사용 가능' : `진행도 ${missionInfo.progress}/${missionInfo.target}`}
+                    </div>
+                  </div>
+                )}
                 <div style={{ fontSize: 11, color: '#666', marginTop: 4 }}>탭하여 숨기기</div>
               </>
             )}
@@ -778,7 +827,7 @@ const openBoxMulti = () => {
           </DCard>
           {police && <DCard style={{ background: 'rgba(52,152,219,0.15)', border: '1px solid rgba(52,152,219,0.3)', color: '#3498db', fontWeight: 700, textAlign: 'center' }}>{police}</DCard>}
           <Header dark>생존자 ({alive.length})</Header>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: 8 }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(150px, 1fr))', gap: 8 }}>
             {alive.map(p => {
               const vf = votersFor(p.id);
               return (
@@ -869,18 +918,12 @@ if (typeof document !== 'undefined' && !document.getElementById('mafia-responsiv
   const styleTag = document.createElement('style');
   styleTag.id = 'mafia-responsive-style';
   styleTag.innerHTML = `
-    * { -webkit-tap-highlight-color: transparent; }
-    body { margin: 0; }
-    @media (min-width: 700px) and (max-width: 1100px) {
-      .mafia-page-container { max-width: 640px !important; }
-    }
-    @media (min-width: 1100px) {
-      .mafia-page-container { max-width: 500px !important; }
-    }
-    @media (max-width: 480px) {
+    * { -webkit-tap-highlight-color: transparent; box-sizing: border-box; }
+    html, body { margin: 0; }
+    input, textarea { font-size: 16px !important; }
+    @media (max-width: 420px) {
       .mafia-page-container { padding-left: 12px !important; padding-right: 12px !important; }
     }
-    input, textarea { font-size: 16px !important; }
   `;
   document.head.appendChild(styleTag);
 }

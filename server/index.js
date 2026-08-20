@@ -138,6 +138,68 @@ function rollSkin() {
   return pool[Math.floor(Math.random() * pool.length)];
 }
 
+/* ══════════════════ 히든 미션 데이터 ══════════════════ */
+const MISSION_POOL = [
+  { id: 'question', desc: "채팅에 물음표(?)를 총 5번 사용하기", type: 'char', trigger: '?', target: 5 },
+  { id: 'exclaim', desc: "채팅에 느낌표(!)를 총 5번 사용하기", type: 'char', trigger: '!', target: 5 },
+  { id: 'banana', desc: "채팅에 '바나나'라는 단어를 2번 포함해서 말하기", type: 'word', trigger: '바나나', target: 2 },
+  { id: 'apple', desc: "채팅에 '사과'라는 단어를 2번 포함해서 말하기", type: 'word', trigger: '사과', target: 2 },
+  { id: 'laugh', desc: "채팅에 'ㅋㅋㅋ'를 3번 사용하기", type: 'word', trigger: 'ㅋㅋㅋ', target: 3 },
+  { id: 'sorry', desc: "채팅에 '음...'을 2번 사용하기", type: 'word', trigger: '음...', target: 2 },
+  { id: 'yes', desc: "채팅에 '그니까'를 2번 사용하기", type: 'word', trigger: '그니까', target: 2 },
+];
+
+function countTrigger(message, mission) {
+  if (mission.type === 'char') {
+    let c = 0;
+    for (const ch of message) if (ch === mission.trigger) c++;
+    return c;
+  }
+  let c = 0, idx = 0;
+  while ((idx = message.indexOf(mission.trigger, idx)) !== -1) { c++; idx += mission.trigger.length; }
+  return c;
+}
+
+function assignMissions(room) {
+  room.missions = {};
+  room.mafiaTeamTarget = null;
+  const alive = room.players.filter(p => p.alive);
+  const mafias = alive.filter(p => p.role === '마피아');
+  const polices = alive.filter(p => p.role === '경찰');
+
+  mafias.forEach(p => {
+    const m = MISSION_POOL[Math.floor(Math.random() * MISSION_POOL.length)];
+    const autoSuccess = p.isBot ? Math.random() < 0.7 : false;
+    room.missions[p.id] = { ...m, progress: 0, done: autoSuccess, roleType: '마피아' };
+    if (!p.isBot) io.to(p.id).emit('missionAssigned', room.missions[p.id]);
+  });
+  polices.forEach(p => {
+    const m = MISSION_POOL[Math.floor(Math.random() * MISSION_POOL.length)];
+    const autoSuccess = p.isBot ? Math.random() < 0.7 : false;
+    room.missions[p.id] = { ...m, progress: 0, done: autoSuccess, roleType: '경찰' };
+    if (!p.isBot) io.to(p.id).emit('missionAssigned', room.missions[p.id]);
+  });
+}
+
+function resolveMissions(roomCode) {
+  const room = rooms[roomCode];
+  if (!room) return;
+  const alive = room.players.filter(p => p.alive);
+  const mafias = alive.filter(p => p.role === '마피아');
+  const polices = alive.filter(p => p.role === '경찰');
+  const mafiaSuccess = mafias.some(p => room.missions?.[p.id]?.done);
+  const policeSuccess = polices.some(p => room.missions?.[p.id]?.done);
+  room.mafiaCanKill = mafias.length === 0 ? false : mafiaSuccess;
+  room.policeCanInvestigate = polices.length === 0 ? false : policeSuccess;
+
+  if (mafias.length > 0 && !mafiaSuccess) {
+    io.to(roomCode).emit('chatMessage', { nickname: '시스템', type: 'system', emoji: '🔪', message: '🔪 마피아가 히든미션에 실패했습니다! 오늘 밤은 아무도 처치할 수 없습니다.' });
+  }
+  if (polices.length > 0 && !policeSuccess) {
+    io.to(roomCode).emit('chatMessage', { nickname: '시스템', type: 'system', emoji: '🔍', message: '🔍 경찰이 히든미션에 실패했습니다! 오늘 밤은 조사를 할 수 없습니다.' });
+  }
+}
+
 /* ══════════════════ Firebase 헬퍼 함수 ══════════════════ */
 async function loadRankings() {
   try {
@@ -267,8 +329,14 @@ function botNightAction(roomCode) {
 
       let target;
       if (bot.role === '마피아') {
-        const nonMafia = targets.filter(p => p.role !== '마피아');
-        target = nonMafia.length > 0 ? nonMafia[Math.floor(Math.random() * nonMafia.length)] : targets[0];
+        if (room.mafiaTeamTarget) {
+          target = room.players.find(p => p.id === room.mafiaTeamTarget && p.alive) || null;
+        }
+        if (!target) {
+          const nonMafia = targets.filter(p => p.role !== '마피아');
+          target = nonMafia.length > 0 ? nonMafia[Math.floor(Math.random() * nonMafia.length)] : targets[0];
+          room.mafiaTeamTarget = target.id;
+        }
       } else {
         target = targets[Math.floor(Math.random() * targets.length)];
       }
@@ -341,6 +409,7 @@ function processVotes(roomCode) {
   const winner = checkWin(room);
   if (winner) { endGame(roomCode, winner); return; }
   room.phase = 'night'; room.nightActions = {};
+  resolveMissions(roomCode);
   if (result === 'eliminated') {
     io.to(roomCode).emit('phaseChange', { phase: 'night', event: 'eliminated', eliminatedNickname: elim.nickname, eliminatedEmoji: elim.emoji });
     io.to(roomCode).emit('chatMessage', { nickname: '시스템', type: 'system', emoji: '⚖️', message: `${elim.emoji} ${elim.nickname} 님이 시민들의 투표로 처형되었습니다.` });
@@ -359,11 +428,15 @@ function processNight(roomCode) {
   const room = rooms[roomCode];
   if (!room) return;
   if (room.nightActions['경찰']) {
-    const t = room.players.find(p => p.id === room.nightActions['경찰'].targetId);
     const cop = room.players.find(p => p.id === room.nightActions['경찰'].actorId);
-    if (t && cop && !cop.isBot) io.to(cop.id).emit('policeResult', { nickname: t.nickname, emoji: t.emoji, role: t.role });
+    if (room.policeCanInvestigate) {
+      const t = room.players.find(p => p.id === room.nightActions['경찰'].targetId);
+      if (t && cop && !cop.isBot) io.to(cop.id).emit('policeResult', { nickname: t.nickname, emoji: t.emoji, role: t.role });
+    } else {
+      if (cop && !cop.isBot) io.to(cop.id).emit('policeResult', { nickname: null, emoji: '❌', role: null, blocked: true });
+    }
   }
-  const mt = room.nightActions['마피아']?.targetId;
+  const mt = room.mafiaCanKill ? room.nightActions['마피아']?.targetId : null;
   const dt = room.nightActions['의사']?.targetId;
   let killed = null, healed = false, saved = null;
   if (mt) {
@@ -374,6 +447,7 @@ function processNight(roomCode) {
   const winner = checkWin(room);
   if (winner) { endGame(roomCode, winner); return; }
   room.phase = 'day';
+  assignMissions(room);
   if (killed) {
     io.to(roomCode).emit('phaseChange', { phase: 'day', event: 'nightKill', killedNickname: killed.nickname, killedEmoji: killed.emoji });
     io.to(roomCode).emit('chatMessage', { nickname: '시스템', type: 'system', emoji: '☀️', message: `${killed.emoji} ${killed.nickname} 님이 마피아에 의해 사망했습니다.` });
@@ -431,7 +505,8 @@ function processQuickQueue() {
     rooms[roomCode] = {
       players: players.map(p => ({ ...p, score: 0, isBot: false })), host: players[0].id,
       started: false, phase: 'day', votes: {}, voteDetails: {}, nightActions: {}, policeCorrect: [],
-      settings: { maxPlayers: 10, mafiaCount: 1, policeCount: 1, doctorCount: 1, dayTime: 90, voteTime: 45, nightTime: 45 }
+      settings: { maxPlayers: 10, mafiaCount: 1, policeCount: 1, doctorCount: 1, dayTime: 90, voteTime: 45, nightTime: 45 },
+      missions: {}, mafiaCanKill: true, policeCanInvestigate: true, mafiaTeamTarget: null
     };
     players.forEach(p => { const s = io.sockets.sockets.get(p.id); if (s) s.join(roomCode); });
     io.to(roomCode).emit('quickMatchFound', { roomCode }); io.to(roomCode).emit('roomUpdate', rooms[roomCode]);
@@ -440,6 +515,8 @@ function processQuickQueue() {
       if (r && !r.started && r.players.length >= 5) {
         r.started = true; r.players = assignRoles(r.players, r.settings); r.phase = 'day';
         r.votes = {}; r.voteDetails = {}; r.nightActions = {}; r.policeCorrect = [];
+        r.mafiaCanKill = true; r.policeCanInvestigate = true;
+        assignMissions(r);
         sendGameState(roomCode);
         io.to(roomCode).emit('chatMessage', { nickname: '시스템', emoji: '🎮', type: 'system', message: '퀵매칭 게임이 시작됩니다!' });
         startTimer(roomCode); startBotChat(roomCode);
@@ -475,20 +552,7 @@ io.on('connection', (socket) => {
     socket.emit('inventoryData', { inventory: inv, equipped: eq });
   });
 
-  socket.on('openBox', async ({ uid }) => {
-    const BOX_COST = 200;
-    const currentCoins = await getCoins(uid);
-    if (currentCoins < BOX_COST) { socket.emit('error', '코인이 부족합니다!'); return; }
-    const newCoins = currentCoins - BOX_COST;
-    await saveCoins(uid, newCoins);
-    const wonSkin = rollSkin();
-    const inv = await getInventory(uid);
-    inv.push(wonSkin.id);
-    await saveInventory(uid, inv);
-    socket.emit('boxResult', { skin: wonSkin, newCoins });
-  });
-
-    const DECOMPOSE_VALUE = { common: 20, uncommon: 50, rare: 120, epic: 300, legendary: 800 };
+  const DECOMPOSE_VALUE = { common: 20, uncommon: 50, rare: 120, epic: 300, legendary: 800 };
 
   socket.on('decomposeSkin', async ({ uid, skinId }) => {
     const inv = await getInventory(uid);
@@ -532,18 +596,43 @@ io.on('connection', (socket) => {
 
     socket.emit('boxMultiResult', { skins: wonSkins, newCoins });
   });
+
   socket.on('equipSkin', async ({ uid, skinId }) => {
     await saveEquippedSkin(uid, skinId);
     socket.emit('equipped', { skinId });
   });
 
+  socket.on('openBox', async ({ uid }) => {
+    const BOX_COST = 200;
+    const currentCoins = await getCoins(uid);
+    if (currentCoins < BOX_COST) { socket.emit('error', '코인이 부족합니다!'); return; }
+    const newCoins = currentCoins - BOX_COST;
+    await saveCoins(uid, newCoins);
+    const wonSkin = rollSkin();
+    const inv = await getInventory(uid);
+    inv.push(wonSkin.id);
+    await saveInventory(uid, inv);
+    socket.emit('boxResult', { skin: wonSkin, newCoins });
+  });
+
   socket.on('createRoom', ({ roomCode, nickname, emoji, color, uid, settings }) => {
     if (!uid) { socket.emit('error', '로그인이 필요합니다.'); return; }
     if (rooms[roomCode]) { socket.emit('error', '이미 존재하는 방입니다.'); return; }
+    const s = settings || {};
+    const clamp = (v, min, max, def) => { const n = parseInt(v, 10); if (isNaN(n)) return def; return Math.max(min, Math.min(max, n)); };
+    const finalSettings = {
+      maxPlayers: clamp(s.maxPlayers, 5, 30, 10),
+      mafiaCount: clamp(s.mafiaCount, 1, 10, 2),
+      policeCount: clamp(s.policeCount, 0, 5, 1),
+      doctorCount: clamp(s.doctorCount, 0, 5, 1),
+      dayTime: clamp(s.dayTime, 10, 300, 90),
+      voteTime: clamp(s.voteTime, 10, 180, 45),
+      nightTime: clamp(s.nightTime, 10, 180, 45),
+    };
     rooms[roomCode] = {
       players: [{ id: socket.id, nickname, emoji, color, uid, score: 0, isBot: false }],
       host: socket.id, started: false, phase: 'day', votes: {}, voteDetails: {}, nightActions: {}, policeCorrect: [],
-      settings: settings || { maxPlayers: 10, mafiaCount: 2, policeCount: 1, doctorCount: 1, dayTime: 90, voteTime: 45, nightTime: 45 }
+      settings: finalSettings, missions: {}, mafiaCanKill: true, policeCanInvestigate: true, mafiaTeamTarget: null
     };
     socket.join(roomCode);
     io.to(roomCode).emit('roomUpdate', rooms[roomCode]);
@@ -589,34 +678,34 @@ io.on('connection', (socket) => {
     io.to(roomCode).emit('chatMessage', { nickname: '시스템', type: 'system', emoji: '🚪', message: `${kicked.emoji} ${kicked.nickname} 퇴장!` });
   });
 
-    socket.on('leaveRoom', ({ roomCode }) => {
-      const room = rooms[roomCode];
-      if (!room) return;
-      const wasHost = room.host === socket.id;
-      room.players = room.players.filter(p => p.id !== socket.id);
-      socket.leave(roomCode);
+  socket.on('leaveRoom', ({ roomCode }) => {
+    const room = rooms[roomCode];
+    if (!room) return;
+    const wasHost = room.host === socket.id;
+    room.players = room.players.filter(p => p.id !== socket.id);
+    socket.leave(roomCode);
 
-      if (room.players.length === 0) {
+    if (room.players.length === 0) {
+      if (room.timer) clearInterval(room.timer);
+      if (room.botChatTimer) clearInterval(room.botChatTimer);
+      delete rooms[roomCode];
+      return;
+    }
+
+    if (wasHost) {
+      const newHost = room.players.find(p => !p.isBot);
+      if (newHost) {
+        room.host = newHost.id;
+        io.to(roomCode).emit('chatMessage', { nickname: '시스템', type: 'system', emoji: '👑', message: `${newHost.emoji} ${newHost.nickname} 님이 새 방장이 되었습니다!` });
+      } else {
         if (room.timer) clearInterval(room.timer);
         if (room.botChatTimer) clearInterval(room.botChatTimer);
         delete rooms[roomCode];
         return;
       }
-
-      if (wasHost) {
-        const newHost = room.players.find(p => !p.isBot);
-        if (newHost) {
-          room.host = newHost.id;
-          io.to(roomCode).emit('chatMessage', { nickname: '시스템', type: 'system', emoji: '👑', message: `${newHost.emoji} ${newHost.nickname} 님이 새 방장이 되었습니다!` });
-        } else {
-          if (room.timer) clearInterval(room.timer);
-          if (room.botChatTimer) clearInterval(room.botChatTimer);
-          delete rooms[roomCode];
-          return;
-        }
-      }
-      io.to(roomCode).emit('roomUpdate', room);
-    });
+    }
+    io.to(roomCode).emit('roomUpdate', room);
+  });
 
   socket.on('getPlayerInfo', ({ roomCode, targetId }) => {
     const room = rooms[roomCode]; if (!room) return;
@@ -633,6 +722,8 @@ io.on('connection', (socket) => {
     if (mafiaCount + policeCount + doctorCount >= room.players.length) { socket.emit('error', '역할 수 초과!'); return; }
     room.started = true; room.players = assignRoles(room.players, room.settings);
     room.phase = 'day'; room.votes = {}; room.voteDetails = {}; room.nightActions = {}; room.policeCorrect = [];
+    room.mafiaCanKill = true; room.policeCanInvestigate = true;
+    assignMissions(room);
     sendGameState(roomCode);
     io.to(roomCode).emit('chatMessage', { nickname: '시스템', emoji: '🎮', type: 'system', message: '게임이 시작되었습니다! 마피아를 찾아내세요!' });
     startTimer(roomCode); startBotChat(roomCode);
@@ -647,6 +738,20 @@ io.on('connection', (socket) => {
     }
     if (!me.alive) return;
     io.to(roomCode).emit('chatMessage', { nickname: me.nickname, message, type: 'normal', emoji: me.emoji });
+
+    if ((room.phase === 'day' || room.phase === 'vote') && room.missions && room.missions[me.id] && !room.missions[me.id].done) {
+      const mission = room.missions[me.id];
+      const count = countTrigger(message, mission);
+      if (count > 0) {
+        mission.progress += count;
+        if (mission.progress >= mission.target) {
+          mission.done = true;
+          if (!me.isBot) io.to(me.id).emit('missionResult', { success: true });
+        } else if (!me.isBot) {
+          io.to(me.id).emit('missionProgress', { progress: mission.progress, target: mission.target });
+        }
+      }
+    }
   });
 
   socket.on('vote', ({ roomCode, targetId }) => {
@@ -664,6 +769,7 @@ io.on('connection', (socket) => {
     const room = rooms[roomCode]; if (!room || room.phase !== 'night') return;
     const me = room.players.find(p => p.id === socket.id); if (!me || !me.alive) return;
     room.nightActions[me.role] = { actorId: socket.id, targetId };
+    if (me.role === '마피아') { room.mafiaTeamTarget = targetId; }
     if (me.role === '경찰') {
       const t = room.players.find(p => p.id === targetId);
       if (t) { io.to(socket.id).emit('policeResult', { nickname: t.nickname, emoji: t.emoji, role: t.role }); if (t.role === '마피아') { if (!room.policeCorrect) room.policeCorrect = []; room.policeCorrect.push(me.nickname); } }
@@ -699,7 +805,7 @@ io.on('connection', (socket) => {
       const wasPlayer = r.players.find(p => p.id === socket.id);
       if (!wasPlayer) continue;
 
-            if (wasHost) {
+      if (wasHost) {
         const newHost = r.players.find(p => p.id !== socket.id && !p.isBot);
         r.players = r.players.filter(p => p.id !== socket.id);
         if (r.players.length === 0 || !newHost) {
